@@ -56,7 +56,7 @@ export default function App() {
   // Accounts & Authentication State
   const [accounts, setAccounts] = useState<UserAccount[]>(() => {
     try {
-      const saved = localStorage.getItem('edueval_accounts_v4');
+      const saved = localStorage.getItem('edueval_accounts_v5');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -69,7 +69,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('edueval_accounts_v4', JSON.stringify(accounts));
+      localStorage.setItem('edueval_accounts_v5', JSON.stringify(accounts));
     } catch (e) {
       console.error('Error saving accounts:', e);
     }
@@ -77,7 +77,7 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     try {
-      const saved = localStorage.getItem('edueval_current_user_v4');
+      const saved = localStorage.getItem('edueval_current_user_v5');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return INITIAL_USER_ACCOUNTS[0] || null;
@@ -86,7 +86,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       try {
-        localStorage.setItem('edueval_current_user_v4', JSON.stringify(currentUser));
+        localStorage.setItem('edueval_current_user_v5', JSON.stringify(currentUser));
       } catch (e) {}
     }
   }, [currentUser]);
@@ -100,10 +100,10 @@ export default function App() {
   });
   const [period, setPeriod] = useState<string>('Học kỳ I');
 
-  // Data State with auto-sanitization and localStorage persistence (v4 with 70 teachers)
+  // Data State with auto-sanitization and localStorage persistence (v5 with Google Sheet roster)
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     try {
-      const saved = localStorage.getItem('edueval_teachers_v4');
+      const saved = localStorage.getItem('edueval_teachers_v5');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -121,7 +121,7 @@ export default function App() {
   useEffect(() => {
     try {
       const { cleanTeachers } = cleanTeachersList(teachers);
-      localStorage.setItem('edueval_teachers_v4', JSON.stringify(cleanTeachers));
+      localStorage.setItem('edueval_teachers_v5', JSON.stringify(cleanTeachers));
     } catch (e) {
       console.error('Error saving teachers to localStorage:', e);
     }
