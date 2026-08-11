@@ -13,7 +13,8 @@ import {
   EmulationMovement,
   MovementParticipation,
   AttendanceRecord,
-  SelfDeclarationRecord
+  SelfDeclarationRecord,
+  UserAccount
 } from './types';
 import { 
   MOCK_TEACHERS, 
@@ -25,7 +26,8 @@ import {
   INITIAL_EMULATION_MOVEMENTS,
   INITIAL_MOVEMENT_PARTICIPATIONS,
   INITIAL_ATTENDANCE_RECORDS,
-  INITIAL_SELF_DECLARATIONS
+  INITIAL_SELF_DECLARATIONS,
+  INITIAL_USER_ACCOUNTS
 } from './data/mockData';
 
 import { Navbar } from './components/Navbar';
@@ -43,13 +45,53 @@ import { TeacherPortfolioTab } from './components/Portfolio/TeacherPortfolioTab'
 import { MoETReportTab } from './components/Reports/MoETReportTab';
 import { AIConsultantChatModal } from './components/AI/AIConsultantChatModal';
 import { ApiKeyGuideModal } from './components/Modals/ApiKeyGuideModal';
+import { LoginModal } from './components/Auth/LoginModal';
+import { AccountManagementModal } from './components/Auth/AccountManagementModal';
 import { syncGoogleSheetsData } from './services/apiClient';
 import { getStoredApiKey } from './services/geminiClient';
 import { cleanTeachersList } from './utils/sanitizer';
 import { getAutoAcademicYear } from './utils/academicYear';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<Role>('ADMIN_PRINCIPAL');
+  // Accounts & Authentication State
+  const [accounts, setAccounts] = useState<UserAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem('edueval_accounts_v4');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading accounts:', e);
+    }
+    return INITIAL_USER_ACCOUNTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('edueval_accounts_v4', JSON.stringify(accounts));
+    } catch (e) {
+      console.error('Error saving accounts:', e);
+    }
+  }, [accounts]);
+
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem('edueval_current_user_v4');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_USER_ACCOUNTS[0] || null;
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      try {
+        localStorage.setItem('edueval_current_user_v4', JSON.stringify(currentUser));
+      } catch (e) {}
+    }
+  }, [currentUser]);
+
+  const [currentRole, setCurrentRole] = useState<Role>(currentUser?.role || 'ADMIN_PRINCIPAL');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   
   // Quản lý Năm học & Đợt đánh giá linh hoạt (tự động tính theo mốc tháng 7)
@@ -58,10 +100,10 @@ export default function App() {
   });
   const [period, setPeriod] = useState<string>('Học kỳ I');
 
-  // Data State with auto-sanitization and localStorage persistence (v3 with 6 groups)
+  // Data State with auto-sanitization and localStorage persistence (v4 with 70 teachers)
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     try {
-      const saved = localStorage.getItem('edueval_teachers_v3');
+      const saved = localStorage.getItem('edueval_teachers_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -79,7 +121,7 @@ export default function App() {
   useEffect(() => {
     try {
       const { cleanTeachers } = cleanTeachersList(teachers);
-      localStorage.setItem('edueval_teachers_v3', JSON.stringify(cleanTeachers));
+      localStorage.setItem('edueval_teachers_v4', JSON.stringify(cleanTeachers));
     } catch (e) {
       console.error('Error saving teachers to localStorage:', e);
     }
@@ -106,6 +148,8 @@ export default function App() {
   const [isAIChatOpen, setIsAIChatOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isAccountManagerOpen, setIsAccountManagerOpen] = useState<boolean>(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
 
   // Check stored API key on mount
@@ -116,6 +160,23 @@ export default function App() {
       setIsApiKeyModalOpen(true);
     }
   }, []);
+
+  // Handle Login
+  const handleUserLogin = (user: UserAccount) => {
+    setCurrentUser(user);
+    setCurrentRole(user.role);
+    const newLog: AuditLogItem = {
+      id: `log_auth_${Date.now()}`,
+      timestamp: new Date().toLocaleString('vi-VN'),
+      actorName: user.fullName,
+      actorRole: user.role,
+      action: 'ĐĂNG NHẬP HỆ THỐNG',
+      targetTeacherName: user.fullName,
+      details: `Đăng nhập thành công với vai trò ${user.role === 'ADMIN_PRINCIPAL' ? 'Ban Giám Hiệu' : (user.role === 'HEAD_OF_DEPARTMENT' ? 'Tổ Trưởng/Phó' : 'Giáo Viên')}.`,
+      ipAddress: '118.70.124.18',
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
 
   // Filter teachers based on search query & department
   const filteredTeachers = teachers.filter((t) => {
@@ -143,9 +204,9 @@ export default function App() {
     const newLog: AuditLogItem = {
       id: `log_${Date.now()}`,
       timestamp: new Date().toLocaleString('vi-VN'),
-      actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng Nguyễn Minh Trí' : (currentRole === 'HEAD_OF_DEPARTMENT' ? 'Tổ trưởng / Tổ phó chuyên môn' : 'Giáo viên'),
+      actorName: currentUser?.fullName || (currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng Nguyễn Minh Trí' : 'Giáo viên'),
       actorRole: currentRole,
-      action: evaluation.digitalSignature ? 'KÝ SỐ PHÊ DUYỆT ĐÁNH GIÁ' : 'CẬP NHẬT ĐIỂM ĐÁNH GIÁ',
+      action: evaluation.digitalSignature ? 'KÝ SỐ PHÊ DUYỆT ĐÁNH GIÁ NĐ 233' : 'CẬP NHẬT ĐIỂM ĐÁNH GIÁ',
       targetTeacherName: targetTeacher?.fullName || teacherId,
       details: `Đã cập nhật điểm đánh giá cuối: ${evaluation.finalScore} điểm (${evaluation.classification}).`,
       ipAddress: '118.70.124.18',
@@ -179,7 +240,7 @@ export default function App() {
     const newLog: AuditLogItem = {
       id: `log_mat_${Date.now()}`,
       timestamp: new Date().toLocaleString('vi-VN'),
-      actorName: 'Hiệu trưởng Nguyễn Minh Trí',
+      actorName: currentUser?.fullName || 'Hiệu trưởng Nguyễn Minh Trí',
       actorRole: 'ADMIN_PRINCIPAL',
       action: 'CẬP NHẬT MA TRẬN TRỌNG SỐ',
       targetTeacherName: 'Toàn bộ viên chức nhà trường',
@@ -261,6 +322,9 @@ export default function App() {
       <Navbar
         currentRole={currentRole}
         setCurrentRole={setCurrentRole}
+        currentUser={currentUser}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onOpenAccountManager={() => setIsAccountManagerOpen(true)}
         selectedDepartment={selectedDepartment}
         setSelectedDepartment={setSelectedDepartment}
         searchQuery={searchQuery}
@@ -314,7 +378,7 @@ export default function App() {
                 const newLog: AuditLogItem = {
                   id: `log_admin_${Date.now()}`,
                   timestamp: new Date().toLocaleString('vi-VN'),
-                  actorName: 'Quản trị viên Hệ thống',
+                  actorName: currentUser?.fullName || 'Quản trị viên Hệ thống',
                   actorRole: currentRole,
                   action,
                   targetTeacherName: targetName,
@@ -338,7 +402,7 @@ export default function App() {
                 const newLog: AuditLogItem = {
                   id: `log_mov_${Date.now()}`,
                   timestamp: new Date().toLocaleString('vi-VN'),
-                  actorName: 'Ban Giám Hiệu / Admin',
+                  actorName: currentUser?.fullName || 'Ban Giám Hiệu',
                   actorRole: currentRole,
                   action,
                   targetTeacherName: targetName,
@@ -361,7 +425,7 @@ export default function App() {
                 const newLog: AuditLogItem = {
                   id: `log_att_${Date.now()}`,
                   timestamp: new Date().toLocaleString('vi-VN'),
-                  actorName: 'Ban Giám Hiệu / BGH',
+                  actorName: currentUser?.fullName || 'Ban Giám Hiệu',
                   actorRole: currentRole,
                   action,
                   targetTeacherName: targetName,
@@ -379,13 +443,14 @@ export default function App() {
               setSelfDeclarations={setSelfDeclarations}
               teachers={teachers}
               currentRole={currentRole}
+              currentTeacherId={currentUser?.teacherId}
               onAddPassiveLog={handleAddPassiveLog}
               onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
               onAddAuditLog={(action, targetName, details) => {
                 const newLog: AuditLogItem = {
                   id: `log_sd_${Date.now()}`,
                   timestamp: new Date().toLocaleString('vi-VN'),
-                  actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng / Tổ phó chuyên môn',
+                  actorName: currentUser?.fullName || (currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng / Tổ phó chuyên môn'),
                   actorRole: currentRole,
                   action,
                   targetTeacherName: targetName,
@@ -412,6 +477,7 @@ export default function App() {
             <Evaluation360Tab
               teachers={filteredTeachers}
               currentRole={currentRole}
+              currentUser={currentUser}
               criteria={criteria}
               appeals={appeals}
               onUpdateTeacherEvaluation={handleUpdateTeacherEvaluation}
@@ -446,6 +512,42 @@ export default function App() {
         </main>
 
       </div>
+
+      {/* Login & Switch User Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        accounts={accounts}
+        currentUser={currentUser}
+        onLogin={handleUserLogin}
+        onOpenAccountManager={() => {
+          setIsLoginModalOpen(false);
+          setIsAccountManagerOpen(true);
+        }}
+      />
+
+      {/* 70 Accounts Management Modal */}
+      <AccountManagementModal
+        isOpen={isAccountManagerOpen}
+        onClose={() => setIsAccountManagerOpen(false)}
+        accounts={accounts}
+        setAccounts={setAccounts}
+        currentUser={currentUser}
+        onAddAuditLog={(action, targetName, details) => {
+          const newLog: AuditLogItem = {
+            id: `log_acc_${Date.now()}`,
+            timestamp: new Date().toLocaleString('vi-VN'),
+            actorName: currentUser?.fullName || 'Quản trị viên',
+            actorRole: currentRole,
+            action,
+            targetTeacherName: targetName,
+            details,
+            ipAddress: '118.70.124.18',
+          };
+          setAuditLogs((prev) => [newLog, ...prev]);
+        }}
+        academicYear={academicYear}
+      />
 
       {/* AI Consultant Popup Chat */}
       <AIConsultantChatModal
@@ -482,7 +584,7 @@ export default function App() {
           const newLog: AuditLogItem = {
             id: `log_imp_${Date.now()}`,
             timestamp: new Date().toLocaleString('vi-VN'),
-            actorName: 'Ban Giám Hiệu / Quản trị viên',
+            actorName: currentUser?.fullName || 'Ban Giám Hiệu',
             actorRole: currentRole,
             action,
             targetTeacherName: targetName,

@@ -261,3 +261,19 @@ export interface AppealDispute {
   submittedAt: string;
   responseNote?: string;
 }
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  passwordHash: string; // Mật khẩu (mặc định: 123456 hoặc admin123)
+  fullName: string;
+  role: Role; // 'ADMIN_PRINCIPAL' | 'HEAD_OF_DEPARTMENT' | 'TEACHER'
+  department: Department;
+  position: string;
+  teacherId: string; // Khóa ngoại liên kết với Teacher
+  avatar?: string;
+  email?: string;
+  phone?: string;
+  mustChangePassword?: boolean;
+}
+

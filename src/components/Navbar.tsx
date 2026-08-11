@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Role } from '../types';
+import React, { useState } from 'react';
+import { Role, UserAccount } from '../types';
 import { 
   ShieldCheck, 
   UserCheck, 
@@ -9,13 +9,20 @@ import {
   Search, 
   CheckCircle2, 
   Key,
-  Calendar
+  Calendar,
+  Users,
+  LogOut,
+  User,
+  ChevronDown
 } from 'lucide-react';
 import { SUPPORTED_ACADEMIC_YEARS, EVALUATION_PERIODS } from '../utils/academicYear';
 
 interface NavbarProps {
   currentRole: Role;
   setCurrentRole: (role: Role) => void;
+  currentUser: UserAccount | null;
+  onOpenLoginModal: () => void;
+  onOpenAccountManager: () => void;
   selectedDepartment: string;
   setSelectedDepartment: (dept: string) => void;
   searchQuery: string;
@@ -46,6 +53,9 @@ const DEPARTMENTS: string[] = [
 export const Navbar: React.FC<NavbarProps> = ({
   currentRole,
   setCurrentRole,
+  currentUser,
+  onOpenLoginModal,
+  onOpenAccountManager,
   selectedDepartment,
   setSelectedDepartment,
   searchQuery,
@@ -99,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   NĐ 233/2026
                 </span>
               </div>
-              <p className="hidden sm:block text-[11px] text-slate-400">Đánh Giá Viên Chức Chuẩn Nghị Định 233/2026/NĐ-CP</p>
+              <p className="hidden sm:block text-[11px] text-slate-400">Hệ Thống 70 Tài Khoản Đánh Giá Viên Chức</p>
             </div>
           </div>
 
@@ -113,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
               className="bg-slate-900 border border-slate-700 text-xs text-blue-300 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer"
-              title="Chọn năm học đánh giá (Qua tháng 7 tính năm tiếp theo)"
+              title="Chọn năm học đánh giá"
             >
               {SUPPORTED_ACADEMIC_YEARS.map((yr) => (
                 <option key={yr} value={yr}>
@@ -161,14 +171,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             </select>
           </div>
 
-          {/* Action Tools & API Key Button */}
+          {/* Action Tools & Logged User Info */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
             {/* MANDATORY API KEY BUTTON (Theo AI_INSTRUCTIONS.md mục 2) */}
             <button
               onClick={onOpenApiKeyModal}
               title="Cài đặt API Key Gemini để sử dụng toàn bộ tính năng AI"
-              className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl border bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700 transition-all active:scale-95 cursor-pointer shadow-xs group"
+              className="hidden lg:flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl border bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700 transition-all active:scale-95 cursor-pointer shadow-xs group"
             >
               <div className="relative">
                 <Key className={`w-4 h-4 ${hasApiKey ? 'text-emerald-400' : 'text-rose-500 animate-pulse'}`} />
@@ -188,10 +198,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* AI EdTech Consultant Button */}
             <button
               onClick={onOpenAIChat}
-              className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-2 rounded-xl shadow-md shadow-indigo-500/20 border border-indigo-400/30 transition-all active:scale-95 cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-2 rounded-xl shadow-md shadow-indigo-500/20 border border-indigo-400/30 transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span className="hidden sm:inline">AI Consultant</span>
+              <span>AI Consultant</span>
               {anomalyCount > 0 && (
                 <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full ml-0.5">
                   {anomalyCount}
@@ -199,46 +209,49 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Role Switcher */}
-            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
-              <button
-                onClick={() => setCurrentRole('ADMIN_PRINCIPAL')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  currentRole === 'ADMIN_PRINCIPAL'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Chế độ Ban Giám Hiệu / Admin"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">BGH / Admin</span>
-              </button>
+            {/* 70 Accounts Manager Button (For Admin/BGH or quick access) */}
+            <button
+              onClick={onOpenAccountManager}
+              title="Quản lý & Xuất danh sách 70 tài khoản giáo viên"
+              className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 transition-all active:scale-95 cursor-pointer"
+            >
+              <Users className="w-4 h-4 text-blue-400" />
+              <span className="hidden md:inline">70 Tài Khoản</span>
+            </button>
 
-              <button
-                onClick={() => setCurrentRole('HEAD_OF_DEPARTMENT')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  currentRole === 'HEAD_OF_DEPARTMENT'
-                    ? 'bg-blue-600 text-white shadow-sm font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Chế độ Tổ trưởng / Tổ phó chuyên môn (Đầy đủ quyền duyệt Lớp 1 & Chấm điểm Tổ)"
+            {/* Active User Pill & Login/Switch Account Trigger */}
+            <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 p-1 pl-2.5 rounded-2xl">
+              <div 
+                onClick={onOpenLoginModal}
+                className="flex items-center gap-2 cursor-pointer group"
+                title="Bấm để đổi tài khoản hoặc đăng nhập tài khoản khác"
               >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Tổ Trưởng / Tổ Phó</span>
-              </button>
+                <div className="flex flex-col text-right leading-tight">
+                  <span className="text-xs font-bold text-slate-100 group-hover:text-blue-400 transition-colors flex items-center justify-end gap-1">
+                    {currentUser ? currentUser.fullName : 'Chưa đăng nhập'}
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                  <span className={`text-[10px] font-bold ${
+                    currentUser?.role === 'ADMIN_PRINCIPAL' 
+                      ? 'text-purple-400' 
+                      : currentUser?.role === 'HEAD_OF_DEPARTMENT'
+                      ? 'text-blue-400'
+                      : 'text-emerald-400'
+                  }`}>
+                    {currentUser?.role === 'ADMIN_PRINCIPAL' ? 'BGH / Hiệu Trưởng' : (currentUser?.role === 'HEAD_OF_DEPARTMENT' ? `${currentUser.department} (Tổ Trưởng)` : 'Giáo Viên Cá Nhân')}
+                  </span>
+                </div>
 
-              <button
-                onClick={() => setCurrentRole('TEACHER')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  currentRole === 'TEACHER'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Chế độ Giáo viên cá nhân"
-              >
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Giáo Viên</span>
-              </button>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-sm ${
+                  currentUser?.role === 'ADMIN_PRINCIPAL'
+                    ? 'bg-purple-600'
+                    : currentUser?.role === 'HEAD_OF_DEPARTMENT'
+                    ? 'bg-blue-600'
+                    : 'bg-emerald-600'
+                }`}>
+                  {currentUser ? currentUser.fullName.slice(0, 1) : <User className="w-4 h-4" />}
+                </div>
+              </div>
             </div>
 
           </div>

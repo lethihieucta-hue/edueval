@@ -14,11 +14,20 @@ import {
   AlertTriangle,
   FileText,
   Trash2,
-  Check
+  Check,
+  Clipboard,
+  Globe,
+  ArrowRight,
+  Edit3,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { 
   parseTeachersExcelFile, 
+  parsePastedSpreadsheetText,
+  fetchAndParseGoogleSheetUrl,
   exportTeacherTemplateExcel, 
+  export70TeachersSampleExcel,
   exportTeachersToExcel,
   exportDeclarationTemplateExcel,
   exportDeclarationsToExcel,
@@ -36,7 +45,8 @@ interface TemplateImportExportModalProps {
   onAddAuditLog: (action: string, targetName: string, details: string) => void;
 }
 
-type ImportType = 'TEACHERS' | 'DECLARATIONS' | 'PASSIVE_LOGS';
+type ImportSourceTab = 'FILE_EXCEL' | 'QUICK_PASTE' | 'GOOGLE_SHEET_URL' | 'SAMPLE_TEMPLATES';
+type ImportCategory = 'TEACHERS' | 'DECLARATIONS' | 'PASSIVE_LOGS';
 
 export const TemplateImportExportModal: React.FC<TemplateImportExportModalProps> = ({
   isOpen,
@@ -48,85 +58,26 @@ export const TemplateImportExportModal: React.FC<TemplateImportExportModalProps>
   onAddPassiveLog,
   onAddAuditLog,
 }) => {
-  const [activeImportType, setActiveImportType] = useState<ImportType>('TEACHERS');
+  const [activeSourceTab, setActiveSourceTab] = useState<ImportSourceTab>('FILE_EXCEL');
+  const [activeCategory, setActiveCategory] = useState<ImportCategory>('TEACHERS');
+  
+  // File & parsing states
   const [fileName, setFileName] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [pastedText, setPastedText] = useState<string>('');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>('');
   
-  // Teachers parsing state
-  const [validTeachers, setValidTeachers] = useState<ParsedTeacherRow[]>([]);
-  const [invalidTeachers, setInvalidTeachers] = useState<{ rowNumber: number; rawData: any; errorReason: string }[]>([]);
-  const [totalRowsCount, setTotalRowsCount] = useState<number>(0);
-  const [previewFilter, setPreviewFilter] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
-  const [skipInvalid, setSkipInvalid] = useState<boolean>(true);
-
-  // Fallback CSV rows for other tabs
-  const [legacyParsedRows, setLegacyParsedRows] = useState<any[]>([]);
+  // Parsed teachers rows for interactive preview
+  const [previewRows, setPreviewRows] = useState<ParsedTeacherRow[]>([]);
+  const [invalidRows, setInvalidRows] = useState<{ rowNumber: number; rawData: any; errorReason: string }[]>([]);
+  const [importMode, setImportMode] = useState<'REPLACE' | 'APPEND'>('REPLACE');
   
   const [parseError, setParseError] = useState<string | null>(null);
   const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  // 1. EXPORT SAMPLE TEMPLATES (XUẤT FILE MẪU EXCEL HOẶC CSV)
-  const handleExportExcelTemplate = async (type: ImportType) => {
-    try {
-      if (type === 'TEACHERS') {
-        await exportTeacherTemplateExcel();
-        onAddAuditLog('TẢI FILE MẪU EXCEL GV', 'Hệ thống', 'Tải file mẫu Excel (.xlsx) danh sách giáo viên');
-      } else if (type === 'DECLARATIONS') {
-        await exportDeclarationTemplateExcel();
-        onAddAuditLog('TẢI FILE MẪU EXCEL TỰ KÊ KHAI', 'Hệ thống', 'Tải file mẫu Excel (.xlsx) tự kê khai phong trào');
-      } else {
-        handleExportCSVTemplate(type);
-      }
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file mẫu Excel');
-    }
-  };
-
-  const handleExportCSVTemplate = (type: ImportType) => {
-    let headers = '';
-    let sampleData = '';
-    let filename = '';
-
-    if (type === 'TEACHERS') {
-      filename = 'Mau_Import_DanhSach_GiaoVien_EduEval.csv';
-      headers = 'Mã GV,Họ và Tên,Tổ Chuyên Môn,Chức Vụ,Hạng Chức Danh,Thâm Niên (Năm),Email,Số Điện Thoại\n';
-      sampleData = 
-        'GV-TOAN-101,Nguyễn Văn An,Tổ Toán,Giáo viên THPT,Giáo viên THPT Hạng II,12,nguyenvanan@thptchauthanha.edu.vn,0912345678\n' +
-        'GV-VAN-102,Lê Thị Mai,Tổ Văn - GDKTPL,Tổ trưởng chuyên môn,Giáo viên THPT Hạng I,18,lethimai@thptchauthanha.edu.vn,0987654321\n' +
-        'GV-SU-103,Đặng Kim Ngân,Tổ Sử - Địa - Anh Văn,Tổ phó chuyên môn,Giáo viên THPT Hạng I,15,dangkimngan@thptchauthanha.edu.vn,0909123456\n' +
-        'GV-HD-104,Lê Quốc Hùng,Tổ Tin - Công nghệ,Hợp đồng lao động,Giáo viên THPT Hạng III,3,lequochung@thptchauthanha.edu.vn,0938990112\n' +
-        'NV-VP-105,Nguyễn Thị Bích,Tổ Văn Phòng,Nhân viên Văn phòng,Giáo viên THPT Hạng II,11,nguyenthibich@thptchauthanha.edu.vn,0908556778\n';
-    } else if (type === 'DECLARATIONS') {
-      filename = 'Mau_Import_TuKeKhai_PhongTrao_EduEval.csv';
-      headers = 'Mã GV hoặc Tên GV,Loại Khai Báo (BONUS/PENALTY),Cấp / Danh Mục,Tên Phong Trào hoặc Lỗi Vi Phạm,Giải Thưởng hoặc Chi Tiết,Điểm Đề Xuất (+/-),Minh Chứng / Mô Tả\n';
-      sampleData = 
-        'Trần Văn Hoàng,BONUS,Cấp Tỉnh / Thành phố,Hội thi Thiết kế Bài giảng Số & Elearning,Giải Nhất,8.0,Quyết định khen thưởng số 1234/QĐ-SGDĐT\n' +
-        'Phạm Minh Đức,BONUS,Cấp Xã (Cụm Trường),Hội thao Người giáo viên THPT,Giải Nhất,4.0,Giấy khen cụm thi đua số 3 môn bóng chuyền\n' +
-        'Nguyễn Minh Tuấn,PENALTY,Vi phạm nếp sống / Kỷ luật,Nộp chậm giáo án & trễ sinh hoạt chào cờ,Trễ 15 phút chào cờ,-2.0,Giải trình tự kiểm điểm nộp chậm giáo án tuần 10\n';
-    } else {
-      filename = 'Mau_Import_DiemThuDong_AutoLog_EduEval.csv';
-      headers = 'Mã GV hoặc Tên GV,Nguồn Dữ Liệu (SO_DAU_BAI/MAY_CHAM_CONG/HE_THONG_GIAO_AN/KHEN_THUONG_HSG),Loại Điểm (BONUS/PENALTY),Tiêu Đề Sự Kiện,Điểm Quy Đổi (+/-),Mô Tả Chi Tiết\n';
-      sampleData = 
-        'Trần Văn Hoàng,KHEN_THUONG_HSG,BONUS,Bồi dưỡng học sinh giỏi Toán 12 đạt 02 Giải Nhất cấp Tỉnh,10.0,Ghi nhận tự động từ quyết định thi HSG\n' +
-        'Lê Thị Thu Hà,MAY_CHAM_CONG,PENALTY,Đi trễ máy chấm công FaceID ngày 15/11,-1.5,Máy quét chấm công ghi nhận trễ 20 phút\n' +
-        'Hoàng Quốc Việt,SO_DAU_BAI,BONUS,100% Tiết dạy đăng ký bài giảng số tích cực,3.0,Ghi nhận từ sổ đầu bài điện tử tuần 12\n';
-    }
-
-    const csvContent = '\uFEFF' + headers + sampleData;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.setAttribute('download', filename);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // 2. PARSE EXCEL / CSV FILE UPON UPLOAD
+  // 1. Xử lý tải file Excel / CSV
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,597 +88,582 @@ export const TemplateImportExportModal: React.FC<TemplateImportExportModalProps>
     setIsLoading(true);
 
     try {
-      if (activeImportType === 'TEACHERS') {
+      if (activeCategory === 'TEACHERS') {
         const result = await parseTeachersExcelFile(file);
-        setValidTeachers(result.validRows);
-        setInvalidTeachers(result.invalidRows);
-        setTotalRowsCount(result.totalRows);
+        setPreviewRows(result.validRows);
+        setInvalidRows(result.invalidRows);
 
         if (result.validRows.length === 0 && result.invalidRows.length > 0) {
-          setParseError(`Không tìm thấy dòng giáo viên nào hợp lệ trong file. Vui lòng kiểm tra các dòng bị báo lỗi bên dưới.`);
+          setParseError(`Không tìm thấy hàng giáo viên nào hợp lệ trong file.`);
         }
-      } else {
-        // Parse CSV/Excel for declarations or passive logs
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const text = event.target?.result as string;
-          parseLegacyCSV(text);
-          setIsLoading(false);
-        };
-        reader.readAsText(file, 'UTF-8');
-        return;
       }
     } catch (err: any) {
       setParseError(err.message || 'Lỗi khi đọc file bảng tính.');
-      setValidTeachers([]);
-      setInvalidTeachers([]);
-      setTotalRowsCount(0);
+      setPreviewRows([]);
+      setInvalidRows([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const parseLegacyCSV = (csvText: string) => {
-    try {
-      const lines = csvText.split(/\r\n|\n/).filter((line) => line.trim() !== '');
-      if (lines.length < 2) {
-        setParseError('File không có dữ liệu hoặc sai định dạng mẫu!');
-        setLegacyParsedRows([]);
-        return;
-      }
-
-      const dataRows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const rawLine = lines[i];
-        if (!rawLine.trim()) continue;
-        const values = rawLine.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || rawLine.split(',');
-        const cleanValues = values.map(v => v.replace(/^"|"$/g, '').trim());
-        if (cleanValues.length >= 2) {
-          dataRows.push(cleanValues);
-        }
-      }
-      setLegacyParsedRows(dataRows);
-    } catch (err) {
-      setParseError('Lỗi khi đọc file CSV.');
-      setLegacyParsedRows([]);
+  // 2. Xử lý dán trực tiếp (Quick Paste)
+  const handleParsePastedText = () => {
+    if (!pastedText.trim()) {
+      setParseError('Vui lòng dán nội dung bảng từ Excel hoặc Google Sheets trước.');
+      return;
     }
-  };
 
-  // 3. PROCESS IMPORT INTO APPLICATION STATE
-  const handleConfirmImport = () => {
-    const nowStr = new Date().toLocaleString('vi-VN');
-
-    if (activeImportType === 'TEACHERS') {
-      if (validTeachers.length === 0) {
-        alert('Không có giáo viên hợp lệ nào để nhập!');
-        return;
-      }
-
-      const newTeachersList: Teacher[] = validTeachers.map((row, idx) => {
-        const teacherId = `gv_imp_${Date.now()}_${idx}`;
-        return {
-          id: teacherId,
-          code: row.code || `GV-CT-${Math.floor(100 + Math.random() * 900)}`,
-          fullName: row.fullName,
-          email: row.email,
-          avatar: `https://images.unsplash.com/photo-${1535713875002 + (idx % 10)}?w=150&auto=format&fit=crop&q=80`,
-          department: row.department,
-          position: row.position,
-          titleGrade: row.titleGrade,
-          yearsOfTeaching: row.yearsOfTeaching,
-          phone: row.phone,
-          skillDimensions: [
-            { dimensionName: 'Phẩm chất nhà giáo', score: 90, benchmarkScore: 90 },
-            { dimensionName: 'Phát triển chuyên môn', score: 85, benchmarkScore: 85 },
-            { dimensionName: 'Năng lực sư phạm', score: 85, benchmarkScore: 85 },
-            { dimensionName: 'Ứng dụng CNTT & AI', score: 80, benchmarkScore: 80 },
-            { dimensionName: 'Xây dựng môi trường & Thi đua', score: 85, benchmarkScore: 85 }
-          ],
-          performanceTrend: [
-            { period: 'Tháng 9', score: 85 },
-            { period: 'Tháng 10', score: 86 },
-            { period: 'Tháng 11', score: 88 }
-          ],
-          passiveLogs: [],
-          evidences: [],
-          currentEvaluation: {
-            id: `eval_${teacherId}`,
-            teacherId: teacherId,
-            period: 'Học kỳ I (2026 - 2027)',
-            status: 'DRAFT',
-            passivePointsTotal: 0,
-            finalScore: 85.0,
-            classification: 'HTTNV',
-            isAnomaly: false,
-            scores: {
-              crit_1: { criteriaId: 'crit_1', selfScore: 85, headScore: 85, principalScore: 85 },
-              crit_2: { criteriaId: 'crit_2', selfScore: 90, headScore: 90, principalScore: 90 },
-              crit_3: { criteriaId: 'crit_3', selfScore: 85, headScore: 85, principalScore: 85 },
-              crit_4: { criteriaId: 'crit_4', selfScore: 85, headScore: 85, principalScore: 85 }
-            }
-          }
-        };
-      });
-
-      setTeachers(prev => [...newTeachersList, ...prev]);
-      onAddAuditLog(
-        'NHẬP EXCEL DANH SÁCH GV',
-        'Hệ thống',
-        `Đã nhập thành công ${newTeachersList.length} giáo viên từ file Excel "${fileName}"`
-      );
-
-      setImportSuccessMsg(`Đã nhập thành công ${newTeachersList.length} giáo viên vào hệ thống EduEval!`);
-      setValidTeachers([]);
-      setInvalidTeachers([]);
-      setFileName('');
-
-    } else if (activeImportType === 'DECLARATIONS') {
-      if (legacyParsedRows.length === 0) {
-        alert('Không có dữ liệu kê khai hợp lệ để nhập!');
-        return;
-      }
-
-      let importedCount = 0;
-      const newDeclarationsList: SelfDeclarationRecord[] = [];
-
-      legacyParsedRows.forEach((row, idx) => {
-        const [teacherRef, type, categoryOrLevel, title, awardNameOrInfraction, suggestedPoints, evidenceUrlOrDesc] = row;
-        const foundTeacher = teachers.find(t => 
-          t.id === teacherRef || t.code === teacherRef || t.fullName.toLowerCase().includes((teacherRef || '').toLowerCase())
-        ) || teachers[0];
-
-        if (!title) return;
-
-        const newRec: SelfDeclarationRecord = {
-          id: `sd_imp_${Date.now()}_${idx}`,
-          teacherId: foundTeacher.id,
-          teacherName: foundTeacher.fullName,
-          department: foundTeacher.department,
-          type: (String(type).toUpperCase().includes('PENALTY') || String(type).toUpperCase().includes('VI_PHAM') ? 'PENALTY_INFRACTION' : 'BONUS_AWARD'),
-          title: title,
-          categoryOrLevel: (categoryOrLevel as any) || 'Cấp Trường',
-          awardNameOrInfraction: awardNameOrInfraction || 'Giải Nhất',
-          suggestedPoints: Number(suggestedPoints) || 3.0,
-          evidenceUrlOrDesc: evidenceUrlOrDesc || 'Nhập từ file mẫu Excel/CSV.',
-          submittedAt: nowStr,
-          status: 'PENDING_HEAD'
-        };
-
-        newDeclarationsList.push(newRec);
-        importedCount++;
-      });
-
-      setSelfDeclarations(prev => [...newDeclarationsList, ...prev]);
-      onAddAuditLog('NHẬP FILE TỰ KÊ KHAI', 'Hệ thống', `Đã nhập ${importedCount} bản kê khai phong trào/vi phạm từ file`);
-      setImportSuccessMsg(`Đã nhập thành công ${importedCount} bản kê khai phong trào/vi phạm!`);
-      setLegacyParsedRows([]);
-      setFileName('');
-
-    } else {
-      // PASSIVE LOGS
-      if (legacyParsedRows.length === 0) {
-        alert('Không có ghi nhận điểm thụ động hợp lệ để nhập!');
-        return;
-      }
-
-      let importedCount = 0;
-      legacyParsedRows.forEach((row, idx) => {
-        const [teacherRef, source, type, title, points, description] = row;
-        const foundTeacher = teachers.find(t => 
-          t.id === teacherRef || t.code === teacherRef || t.fullName.toLowerCase().includes((teacherRef || '').toLowerCase())
-        ) || teachers[0];
-
-        if (!title) return;
-
-        const newLog: PassiveLog = {
-          id: `pl_imp_${Date.now()}_${idx}`,
-          teacherId: foundTeacher.id,
-          type: String(type).toUpperCase().includes('PENALTY') ? 'PENALTY' : 'BONUS',
-          source: (source as any) || 'SO_DAU_BAI',
-          title: title,
-          description: description || 'Dữ liệu nhập từ file mẫu tự động.',
-          points: Number(points) || 2.0,
-          timestamp: nowStr,
-          verified: true
-        };
-
-        onAddPassiveLog(foundTeacher.id, newLog);
-        importedCount++;
-      });
-
-      onAddAuditLog('NHẬP FILE ĐIỂM THỤ ĐỘNG', 'Hệ thống', `Đã nhập ${importedCount} ghi nhận điểm thụ động từ file`);
-      setImportSuccessMsg(`Đã nhập thành công ${importedCount} ghi nhận điểm thụ động!`);
-      setLegacyParsedRows([]);
-      setFileName('');
-    }
-  };
-
-  const handleClearSelectedFile = () => {
-    setFileName('');
-    setValidTeachers([]);
-    setInvalidTeachers([]);
-    setLegacyParsedRows([]);
     setParseError(null);
+    setImportSuccessMsg(null);
+    setIsLoading(true);
+
+    try {
+      const result = parsePastedSpreadsheetText(pastedText);
+      setPreviewRows(result.validRows);
+      setInvalidRows(result.invalidRows);
+      if (result.validRows.length === 0) {
+        setParseError('Không nhận diện được hàng dữ liệu nào. Vui lòng kiểm tra lại cấu trúc bảng đã dán.');
+      }
+    } catch (err: any) {
+      setParseError(err.message || 'Lỗi khi phân tích dữ liệu dán.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 3. Xử lý lấy từ Google Sheets URL
+  const handleFetchGoogleSheets = async () => {
+    if (!googleSheetUrl.trim()) {
+      setParseError('Vui lòng nhập đường link Google Sheets.');
+      return;
+    }
+
+    setParseError(null);
+    setImportSuccessMsg(null);
+    setIsLoading(true);
+
+    try {
+      const result = await fetchAndParseGoogleSheetUrl(googleSheetUrl);
+      setPreviewRows(result.validRows);
+      setInvalidRows(result.invalidRows);
+      if (result.validRows.length === 0) {
+        setParseError('Không tìm thấy dữ liệu giáo viên trong Google Sheets.');
+      }
+    } catch (err: any) {
+      setParseError(err.message || 'Lỗi khi đồng bộ Google Sheets.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 4. Trình sửa ô trực tiếp trên bảng xem trước
+  const handleEditCell = (index: number, field: keyof ParsedTeacherRow, value: any) => {
+    setPreviewRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleDeletePreviewRow = (index: number) => {
+    setPreviewRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // 5. Lưu vào hệ thống
+  const handleCommitImport = () => {
+    if (previewRows.length === 0) {
+      setParseError('Không có dữ liệu hợp lệ để lưu vào hệ thống.');
+      return;
+    }
+
+    const newTeachersList: Teacher[] = previewRows.map((r, idx) => {
+      const teacherId = r.code ? `gv_${r.code.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : `gv_imp_${Date.now()}_${idx}`;
+      return {
+        id: teacherId,
+        code: r.code || `GV-CT-${100 + idx}`,
+        fullName: r.fullName,
+        email: r.email,
+        phone: r.phone,
+        department: r.department,
+        position: r.position,
+        titleGrade: r.titleGrade,
+        yearsOfTeaching: r.yearsOfTeaching,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        currentEvaluation: {
+          id: `eval_${teacherId}`,
+          teacherId,
+          period: 'Học kỳ I - 2026-2027',
+          status: 'SELF_SUBMITTED',
+          scores: {
+            crit_1: { criteriaId: 'crit_1', selfScore: 85, headScore: 85, principalScore: 85 },
+            crit_2: { criteriaId: 'crit_2', selfScore: 90, headScore: 90, principalScore: 90 },
+            crit_3: { criteriaId: 'crit_3', selfScore: 85, headScore: 85, principalScore: 85 },
+            crit_4: { criteriaId: 'crit_4', selfScore: 85, headScore: 85, principalScore: 85 },
+          },
+          passivePointsTotal: 0,
+          finalScore: 86.0,
+          classification: 'HTTNV',
+          isAnomaly: false,
+          selfSubmittedAt: new Date().toLocaleString('vi-VN')
+        },
+        skillDimensions: [
+          { dimensionName: 'Phẩm chất nhà giáo', score: 90, benchmarkScore: 90 },
+          { dimensionName: 'Phát triển chuyên môn', score: 85, benchmarkScore: 85 },
+          { dimensionName: 'Năng lực sư phạm', score: 85, benchmarkScore: 85 },
+          { dimensionName: 'Ứng dụng CNTT & AI', score: 80, benchmarkScore: 80 },
+          { dimensionName: 'Xây dựng môi trường & Thi đua', score: 85, benchmarkScore: 85 }
+        ],
+        performanceTrend: [
+          { period: 'Tháng 9', score: 82 },
+          { period: 'Tháng 10', score: 85 },
+          { period: 'Tháng 11', score: 86 }
+        ],
+        evidences: [],
+        passiveLogs: []
+      };
+    });
+
+    if (importMode === 'REPLACE') {
+      setTeachers(newTeachersList);
+    } else {
+      setTeachers((prev) => [...prev, ...newTeachersList]);
+    }
+
+    onAddAuditLog(
+      'NHẬP DANH SÁCH GIÁO VIÊN EXCEL',
+      `${previewRows.length} Giáo viên`,
+      `Đã nhập thành công ${previewRows.length} giáo viên vào cơ sở dữ liệu (Chế độ: ${importMode === 'REPLACE' ? 'Thay thế toàn bộ' : 'Bổ sung'})`
+    );
+
+    setImportSuccessMsg(`Đã nhập thành công ${previewRows.length} giáo viên vào hệ thống EduEval!`);
+    setTimeout(() => {
+      onClose();
+    }, 1800);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-7 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0 shadow-xs">
-              <FileSpreadsheet className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center shadow-md">
+              <FileSpreadsheet className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base md:text-lg text-slate-900 flex items-center gap-2">
-                Xuất File Mẫu & Nhập Dữ Liệu Excel / CSV
-                <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  Chuẩn Sư Phạm
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black tracking-tight text-white">Trung Tâm Nhập & Xuất Dữ Liệu Thông Minh</h2>
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+                  Chống Phát Sinh Lỗi 100%
                 </span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Hỗ trợ đọc trực tiếp file Microsoft Excel (.xlsx, .xls) & CSV với khả năng xem trước và kiểm duyệt lỗi tự động.
-              </p>
+              </div>
+              <p className="text-xs text-slate-300">Nhập Excel, Dán trực tiếp từ Google Sheets, Sửa lỗi trực quan trước khi lưu</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+            className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Success Alert */}
-        {importSuccessMsg && (
-          <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs text-emerald-900 font-bold mb-5 flex items-center justify-between shadow-xs animate-fade-in">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <span>{importSuccessMsg}</span>
-            </div>
-            <button 
-              onClick={() => setImportSuccessMsg(null)}
-              className="text-emerald-700 hover:underline cursor-pointer"
-            >
-              Đóng
-            </button>
+        {/* 4 Method Selector Tabs */}
+        <div className="bg-slate-100 p-2 border-b border-slate-200 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setActiveSourceTab('FILE_EXCEL')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSourceTab === 'FILE_EXCEL'
+                ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Upload className="w-4 h-4 text-blue-600" />
+            <span>1. Tải File Excel (.xlsx, .csv)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSourceTab('QUICK_PASTE')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSourceTab === 'QUICK_PASTE'
+                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Clipboard className="w-4 h-4 text-indigo-600" />
+            <span>2. Dán Bảng Trực Tiếp (Quick Paste)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSourceTab('GOOGLE_SHEET_URL')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSourceTab === 'GOOGLE_SHEET_URL'
+                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Globe className="w-4 h-4 text-emerald-600" />
+            <span>3. Link Google Sheets</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSourceTab('SAMPLE_TEMPLATES')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSourceTab === 'SAMPLE_TEMPLATES'
+                ? 'bg-white text-purple-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Download className="w-4 h-4 text-purple-600" />
+            <span>4. Tải File Mẫu Chuẩn</span>
+          </button>
+        </div>
+
+        {/* Status Messages */}
+        {parseError && (
+          <div className="bg-rose-50 border-b border-rose-200 text-rose-700 text-xs p-3 px-6 flex items-center gap-2 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{parseError}</span>
           </div>
         )}
 
-        {/* Import Type Selector Tabs */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold mb-6">
-          <button
-            onClick={() => {
-              setActiveImportType('TEACHERS');
-              handleClearSelectedFile();
-            }}
-            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeImportType === 'TEACHERS'
-                ? 'bg-white text-emerald-800 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>1. Danh Sách Giáo Viên</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveImportType('DECLARATIONS');
-              handleClearSelectedFile();
-            }}
-            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeImportType === 'DECLARATIONS'
-                ? 'bg-white text-emerald-800 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-blue-600" />
-            <span>2. Tự Kê Khai & Phong Trào</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveImportType('PASSIVE_LOGS');
-              handleClearSelectedFile();
-            }}
-            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeImportType === 'PASSIVE_LOGS'
-                ? 'bg-white text-emerald-800 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Table className="w-4 h-4 text-indigo-600" />
-            <span>3. Điểm Thụ Động</span>
-          </button>
-        </div>
-
-        {/* Step 1: Export Sample Templates */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-5 rounded-2xl border border-slate-200 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <span className="bg-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              BƯỚC 1: XUẤT FILE MẪU CHUẨN
-            </span>
-            <h4 className="font-bold text-sm text-slate-900 mt-1.5">
-              Tải file mẫu Excel (.xlsx) hoặc CSV đúng quy chuẩn EduEval
-            </h4>
-            <p className="text-xs text-slate-500 mt-0.5">
-              File có sẵn 6 dòng giáo viên mẫu cho tất cả các tổ và sheet hướng dẫn các quy định.
-            </p>
+        {importSuccessMsg && (
+          <div className="bg-emerald-600 text-white text-xs font-bold p-3 px-6 flex items-center gap-2 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{importSuccessMsg}</span>
           </div>
+        )}
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              onClick={() => handleExportExcelTemplate(activeImportType)}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Tải File Mẫu Excel (.xlsx)</span>
-            </button>
+        {/* Content Body */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          
+          {/* TAB 1: UPLOAD FILE EXCEL */}
+          {activeSourceTab === 'FILE_EXCEL' && (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-3xl p-8 text-center bg-slate-50/50 hover:bg-blue-50/20 transition-all">
+                <input
+                  type="file"
+                  id="excelFileInput"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="excelFileInput"
+                  className="flex flex-col items-center justify-center cursor-pointer group"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-blue-100 group-hover:bg-blue-200 text-blue-600 flex items-center justify-center mb-3 transition-colors">
+                    <Upload className="w-7 h-7" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-800 group-hover:text-blue-600">
+                    Bấm để chọn file Excel (.xlsx, .xls, .csv) hoặc kéo thả vào đây
+                  </span>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Tự động nhận diện tiêu đề, bỏ qua dòng trống hoặc logo trường ở dòng đầu
+                  </p>
+                  {fileName && (
+                    <span className="mt-3 text-xs font-mono font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                      ✓ Đã chọn: {fileName}
+                    </span>
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
 
-            <button
-              onClick={() => handleExportCSVTemplate(activeImportType)}
-              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 transition-all cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>File CSV (.csv)</span>
-            </button>
-          </div>
-        </div>
+          {/* TAB 2: QUICK PASTE */}
+          {activeSourceTab === 'QUICK_PASTE' && (
+            <div className="space-y-3">
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 text-xs text-indigo-900 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Cách dùng siêu dễ:</strong> Mở bảng Google Sheets hoặc Excel của bạn &rarr; Bôi đen toàn bộ các dòng &rarr; Nhấn <strong>Ctrl+C</strong> &rarr; Bấm vào ô bên dưới và nhấn <strong>Ctrl+V</strong>.
+                </div>
+              </div>
 
-        {/* Step 2: Upload File Drag & Drop Zone */}
-        <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-3xl p-6 text-center transition-all bg-white mb-6">
-          <Upload className="w-10 h-10 text-emerald-600 mx-auto mb-2 opacity-80" />
-          <span className="font-extrabold text-sm text-slate-900 block mb-1">
-            BƯỚC 2: TẢI FILE EXCEL HOẶC CSV ĐÃ NHẬP LIỆU LÊN HỆ THỐNG
-          </span>
-          <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
-            Hỗ trợ định dạng <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong>. Hệ thống tự động kiểm tra ký tự rác và đối soát cột.
-          </p>
+              <textarea
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder="Dán (Ctrl+V) bảng dữ liệu giáo viên từ Excel hoặc Google Sheets vào đây..."
+                rows={6}
+                className="w-full p-4 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 shadow-inner"
+              />
 
-          <label className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg cursor-pointer transition-all active:scale-95">
-            <FileCheck className="w-4 h-4" />
-            <span>Chọn File Excel (.xlsx / .csv) Từ Máy</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
-
-          {fileName && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <span className="text-xs font-bold text-slate-800 bg-slate-100 py-1.5 px-3.5 rounded-xl border border-slate-200 flex items-center gap-2">
-                📄 File đã chọn: <strong>{fileName}</strong>
-              </span>
               <button
-                onClick={handleClearSelectedFile}
-                className="text-xs text-rose-600 hover:text-rose-800 p-1 font-semibold cursor-pointer"
-                title="Huỷ chọn file"
+                onClick={handleParsePastedText}
+                disabled={isLoading || !pastedText.trim()}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-2"
               >
-                <X className="w-4 h-4" />
+                <Clipboard className="w-4 h-4" />
+                <span>Phân Tích Bảng Dữ Liệu Đã Dán</span>
               </button>
             </div>
           )}
+
+          {/* TAB 3: GOOGLE SHEETS URL */}
+          {activeSourceTab === 'GOOGLE_SHEET_URL' && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-900">
+                <strong>Đồng bộ Google Sheets trực tiếp:</strong> Dán đường link Google Sheets (chế độ chia sẻ công khai có liên kết).
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={googleSheetUrl}
+                  onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                  placeholder="VD: https://docs.google.com/spreadsheets/d/1A2B3C.../edit"
+                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  onClick={handleFetchGoogleSheets}
+                  disabled={isLoading || !googleSheetUrl.trim()}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>Tải Về & Đọc</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SAMPLE TEMPLATES DOWNLOAD */}
+          {activeSourceTab === 'SAMPLE_TEMPLATES' && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 bg-purple-50 border border-purple-200 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm mb-3">
+                    70
+                  </div>
+                  <h4 className="font-extrabold text-sm text-purple-950 mb-1">File Mẫu 70 Giáo Viên Có Sẵn</h4>
+                  <p className="text-xs text-purple-700 mb-4">
+                    Đã điền sẵn đầy đủ 70 cán bộ giáo viên theo 7 tổ chuyên môn của THPT Châu Thành A.
+                  </p>
+                </div>
+                <button
+                  onClick={() => export70TeachersSampleExcel()}
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải File 70 GV Mẫu</span>
+                </button>
+              </div>
+
+              <div className="p-5 bg-blue-50 border border-blue-200 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm mb-3">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-blue-950 mb-1">File Mẫu Rỗng & Hướng Dẫn</h4>
+                  <p className="text-xs text-blue-700 mb-4">
+                    Gồm 6 dòng mẫu kèm trang tính hướng dẫn quy định chi tiết từng cột.
+                  </p>
+                </div>
+                <button
+                  onClick={() => exportTeacherTemplateExcel()}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải File Mẫu Rỗng</span>
+                </button>
+              </div>
+
+              <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-sm mb-3">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-amber-950 mb-1">File Mẫu Tự Kê Khai / Phong Trào</h4>
+                  <p className="text-xs text-amber-700 mb-4">
+                    Mẫu chuẩn để nhập hàng loạt các quyết định khen thưởng và kê khai.
+                  </p>
+                </div>
+                <button
+                  onClick={() => exportDeclarationTemplateExcel()}
+                  className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải Mẫu Kê Khai</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* INTERACTIVE PREVIEW & INLINE CELL EDITOR TABLE */}
+          {previewRows.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-sm text-slate-800">
+                    Bảng Xem Trước & Chỉnh Sửa Trực Tiếp ({previewRows.length} Giáo Viên)
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[11px] px-2 py-0.5 rounded-full">
+                    ✓ Hợp lệ
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 text-xs text-slate-600">
+                    <span className="font-semibold">Chế độ lưu:</span>
+                    <select
+                      value={importMode}
+                      onChange={(e: any) => setImportMode(e.target.value)}
+                      className="bg-slate-100 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 cursor-pointer"
+                    >
+                      <option value="REPLACE">Thay thế toàn bộ danh sách hiện tại</option>
+                      <option value="APPEND">Bổ sung thêm vào danh sách hiện tại</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleCommitImport}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Lưu Vào Hệ Thống ({previewRows.length} GV)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-2.5 text-[11px] text-blue-900 flex items-center gap-2">
+                <Edit3 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>Bạn có thể <strong>click trực tiếp vào bất kỳ ô nào</strong> bên dưới để chỉnh sửa thông tin trước khi nhấn nút Lưu.</span>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl max-h-[350px] overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold z-10">
+                    <tr>
+                      <th className="py-2.5 px-3 w-10 text-center">STT</th>
+                      <th className="py-2.5 px-3">Mã GV</th>
+                      <th className="py-2.5 px-3">Họ và Tên</th>
+                      <th className="py-2.5 px-3">Tổ Chuyên Môn</th>
+                      <th className="py-2.5 px-3">Chức Vụ</th>
+                      <th className="py-2.5 px-3">Hạng</th>
+                      <th className="py-2.5 px-3 w-16">Thâm Niên</th>
+                      <th className="py-2.5 px-3">Email</th>
+                      <th className="py-2.5 px-3">SĐT</th>
+                      <th className="py-2.5 px-3 w-10 text-center">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {previewRows.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-2 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
+                        
+                        <td className="py-1 px-2">
+                          <input
+                            type="text"
+                            value={row.code}
+                            onChange={(e) => handleEditCell(idx, 'code', e.target.value)}
+                            className="w-24 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs font-mono font-bold text-blue-700"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <input
+                            type="text"
+                            value={row.fullName}
+                            onChange={(e) => handleEditCell(idx, 'fullName', e.target.value)}
+                            className="w-40 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs font-bold text-slate-800"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <select
+                            value={row.department}
+                            onChange={(e) => handleEditCell(idx, 'department', e.target.value)}
+                            className="px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs font-medium text-slate-700 cursor-pointer"
+                          >
+                            <option value="Tổ Toán">Tổ Toán</option>
+                            <option value="Tổ Văn - GDKTPL">Tổ Văn - GDKTPL</option>
+                            <option value="Tổ Hoá - Sinh">Tổ Hoá - Sinh</option>
+                            <option value="Tổ Sử - Địa - Anh Văn">Tổ Sử - Địa - Anh Văn</option>
+                            <option value="Tổ Lý - TD - QP">Tổ Lý - TD - QP</option>
+                            <option value="Tổ Tin - Công nghệ">Tổ Tin - Công nghệ</option>
+                            <option value="Tổ Văn Phòng">Tổ Văn Phòng</option>
+                          </select>
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <input
+                            type="text"
+                            value={row.position}
+                            onChange={(e) => handleEditCell(idx, 'position', e.target.value)}
+                            className="w-32 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs text-slate-700"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <select
+                            value={row.titleGrade}
+                            onChange={(e) => handleEditCell(idx, 'titleGrade', e.target.value)}
+                            className="px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs text-slate-700 cursor-pointer"
+                          >
+                            <option value="Giáo viên THPT Hạng I">Hạng I</option>
+                            <option value="Giáo viên THPT Hạng II">Hạng II</option>
+                            <option value="Giáo viên THPT Hạng III">Hạng III</option>
+                          </select>
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <input
+                            type="number"
+                            value={row.yearsOfTeaching}
+                            onChange={(e) => handleEditCell(idx, 'yearsOfTeaching', Number(e.target.value))}
+                            className="w-14 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs text-center"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <input
+                            type="text"
+                            value={row.email}
+                            onChange={(e) => handleEditCell(idx, 'email', e.target.value)}
+                            className="w-48 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs text-slate-600 font-mono"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2">
+                          <input
+                            type="text"
+                            value={row.phone}
+                            onChange={(e) => handleEditCell(idx, 'phone', e.target.value)}
+                            className="w-28 px-2 py-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-xs text-slate-600"
+                          />
+                        </td>
+
+                        <td className="py-1 px-2 text-center">
+                          <button
+                            onClick={() => handleDeletePreviewRow(idx)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                            title="Xóa hàng này"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* Error Alert */}
-        {parseError && (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 font-medium mb-6 flex items-start gap-3 shadow-xs">
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">{parseError}</p>
-              <p className="text-[11px] text-rose-700 mt-1">
-                Lưu ý: Nếu bạn dùng Apple Numbers (.numbers), vui lòng chọn File > Export To > Excel (.xlsx) trước khi tải lên.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Loading Spinner */}
-        {isLoading && (
-          <div className="p-8 text-center text-xs text-slate-600 font-bold">
-            <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            Đang phân tích và kiểm duyệt dữ liệu bảng tính...
-          </div>
-        )}
-
-        {/* Step 3: LIVE PREVIEW & VALIDATION TABLE (DÀNH CHO GIÁO VIÊN) */}
-        {activeImportType === 'TEACHERS' && (validTeachers.length > 0 || invalidTeachers.length > 0) && (
-          <div className="space-y-4 border-t border-slate-200 pt-5">
-            
-            {/* Validation Badges Summary */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-700">
-                  Tổng số phát hiện: <strong>{totalRowsCount} hàng</strong>
-                </span>
-                <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> {validTeachers.length} Hợp Lệ
-                </span>
-                {invalidTeachers.length > 0 && (
-                  <span className="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-rose-200 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> {invalidTeachers.length} Bị Lỗi Ký Tự
-                  </span>
-                )}
-              </div>
-
-              {/* Filter preview selector */}
-              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs">
-                <button
-                  onClick={() => setPreviewFilter('ALL')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                    previewFilter === 'ALL' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Tất cả ({totalRowsCount})
-                </button>
-                <button
-                  onClick={() => setPreviewFilter('VALID')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                    previewFilter === 'VALID' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Hợp lệ ({validTeachers.length})
-                </button>
-                {invalidTeachers.length > 0 && (
-                  <button
-                    onClick={() => setPreviewFilter('INVALID')}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      previewFilter === 'INVALID' ? 'bg-rose-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    Bị lỗi ({invalidTeachers.length})
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Table Preview */}
-            <div className="overflow-x-auto max-h-64 border border-slate-200 rounded-2xl shadow-inner">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 font-bold text-slate-700 sticky top-0 z-10 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2.5">Trạng Thái</th>
-                    <th className="p-2.5">Mã GV</th>
-                    <th className="p-2.5">Họ và Tên</th>
-                    <th className="p-2.5">Tổ Chuyên Môn</th>
-                    <th className="p-2.5">Chức Vụ</th>
-                    <th className="p-2.5">Hạng Chức Danh</th>
-                    <th className="p-2.5">Thâm Niên</th>
-                    <th className="p-2.5">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* Valid Rows */}
-                  {(previewFilter === 'ALL' || previewFilter === 'VALID') &&
-                    validTeachers.map((row, idx) => (
-                      <tr key={`v_${idx}`} className="hover:bg-emerald-50/40">
-                        <td className="p-2.5 font-bold text-emerald-700 flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Hợp lệ
-                        </td>
-                        <td className="p-2.5 font-bold text-blue-700">{row.code}</td>
-                        <td className="p-2.5 font-bold text-slate-900">{row.fullName}</td>
-                        <td className="p-2.5 text-slate-700">{row.department}</td>
-                        <td className="p-2.5 text-slate-700">{row.position}</td>
-                        <td className="p-2.5 text-slate-600">{row.titleGrade}</td>
-                        <td className="p-2.5 text-slate-700">{row.yearsOfTeaching} năm</td>
-                        <td className="p-2.5 text-slate-500 font-mono text-[11px] truncate max-w-xs">{row.email}</td>
-                      </tr>
-                    ))}
-
-                  {/* Invalid Rows */}
-                  {(previewFilter === 'ALL' || previewFilter === 'INVALID') &&
-                    invalidTeachers.map((row, idx) => (
-                      <tr key={`inv_${idx}`} className="bg-rose-50/70 hover:bg-rose-100/70 text-rose-900">
-                        <td className="p-2.5 font-bold text-rose-700 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Hàng {row.rowNumber} Lỗi
-                        </td>
-                        <td className="p-2.5 font-mono text-[11px] text-rose-700">Lỗi</td>
-                        <td className="p-2.5 font-bold text-rose-900 break-all">
-                          {String(row.rawData?.[1] || row.rawData?.[0] || 'Dữ liệu hỏng')}
-                        </td>
-                        <td colSpan={5} className="p-2.5 text-rose-800 italic font-medium">
-                          ⚠️ {row.errorReason} (Sẽ tự động loại bỏ)
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={skipInvalid}
-                  onChange={(e) => setSkipInvalid(e.target.checked)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-                />
-                <span>Tự động bỏ qua {invalidTeachers.length} dòng lỗi và chỉ nạp dòng hợp lệ (Khuyến nghị)</span>
-              </label>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={handleClearSelectedFile}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                >
-                  Huỷ Bỏ
-                </button>
-                <button
-                  onClick={handleConfirmImport}
-                  disabled={validTeachers.length === 0}
-                  className="px-5 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl shadow-md cursor-pointer flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Xác Nhận Nạp {validTeachers.length} Giáo Viên Vào Hệ Thống</span>
-                </button>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* Legacy CSV Preview for Declarations & Passive Logs */}
-        {activeImportType !== 'TEACHERS' && legacyParsedRows.length > 0 && (
-          <div className="space-y-4 border-t border-slate-200 pt-5">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                <Table className="w-4 h-4 text-emerald-600" />
-                Xem Trước Dữ Liệu Đọc Được ({legacyParsedRows.length} hàng):
-              </span>
-              <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                Sẵn sàng nạp
-              </span>
-            </div>
-
-            <div className="overflow-x-auto max-h-52 border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 font-bold text-slate-700 sticky top-0">
-                  <tr>
-                    <th className="p-2.5 border-b">STT</th>
-                    <th className="p-2.5 border-b">Giáo Viên</th>
-                    <th className="p-2.5 border-b">Loại / Nguồn</th>
-                    <th className="p-2.5 border-b">Cấp / Tiêu Đề</th>
-                    <th className="p-2.5 border-b">Điểm (+/-)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {legacyParsedRows.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold text-slate-500">{idx + 1}</td>
-                      <td className="p-2.5 font-bold text-slate-900">{row[0] || '-'}</td>
-                      <td className="p-2.5 text-slate-700">{row[1] || '-'}</td>
-                      <td className="p-2.5 text-slate-700 truncate max-w-xs">{row[2] || row[3] || '-'}</td>
-                      <td className="p-2.5 font-bold text-emerald-700">{row[4] || row[5] || '+2.0'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={handleClearSelectedFile}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                Huỷ
-              </button>
-              <button
-                onClick={handleConfirmImport}
-                className="px-5 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Xác Nhận Nạp {legacyParsedRows.length} Hàng Vào EduEval</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+          <span>Chuẩn hóa tự động theo tiêu chuẩn Nghị định 233/2026/NĐ-CP</span>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
 
       </div>
     </div>

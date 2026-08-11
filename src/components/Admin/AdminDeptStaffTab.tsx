@@ -486,48 +486,49 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
                       </div>
                     </div>
 
-                  <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Tổ chuyên môn:</span>
-                      <span className="font-bold text-slate-800">{t.department}</span>
+                    <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Tổ chuyên môn:</span>
+                        <span className="font-bold text-slate-800">{t.department}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Chức vụ:</span>
+                        <span className="font-semibold text-indigo-700">{t.position}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Hạng chức danh:</span>
+                        <span className="text-slate-700">{t.titleGrade}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Thâm niên:</span>
+                        <span className="text-slate-700">{t.yearsOfTeaching} năm công tác</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Chức vụ:</span>
-                      <span className="font-semibold text-indigo-700">{t.position}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Hạng chức danh:</span>
-                      <span className="text-slate-700">{t.titleGrade}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Thâm niên:</span>
-                      <span className="text-slate-700">{t.yearsOfTeaching} năm công tác</span>
+
+                    <div className="text-[11px] text-slate-500 space-y-1 px-1">
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="truncate">{t.email}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{t.phone}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-500 space-y-1 px-1">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="truncate">{t.email}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{t.phone}</span>
-                    </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Đánh giá HK I:</span>
+                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                      t.currentEvaluation?.classification === 'HTXSNV' ? 'bg-emerald-100 text-emerald-800' :
+                      t.currentEvaluation?.classification === 'HTTNV' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {t.currentEvaluation?.finalScore || 85}đ ({t.currentEvaluation?.classification || 'HTNV'})
+                    </span>
                   </div>
                 </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Đánh giá HK I:</span>
-                  <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                    t.currentEvaluation?.classification === 'HTXSNV' ? 'bg-emerald-100 text-emerald-800' :
-                    t.currentEvaluation?.classification === 'HTTNV' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {t.currentEvaluation?.finalScore || 85}đ ({t.currentEvaluation?.classification || 'HTNV'})
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {filteredTeachers.length === 0 && (

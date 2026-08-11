@@ -1,5 +1,6 @@
-import { Teacher, Department, SelfDeclarationRecord, PassiveLog } from '../types';
+import { Teacher, Department, SelfDeclarationRecord, PassiveLog, UserAccount } from '../types';
 import { isCorruptedString, isCorruptedTeacher, formatVietnameseName } from '../utils/sanitizer';
+import { MOCK_TEACHERS } from '../data/mockData';
 
 // Khai báo kiểu mở rộng cho window.XLSX nếu có
 declare global {
@@ -74,12 +75,12 @@ export function normalizeDepartment(deptStr?: string): Department {
   const clean = deptStr.trim().toLowerCase();
   
   if (clean.includes('toan')) return 'Tổ Toán';
-  if (clean.includes('van') || clean.includes('gdktpl') || clean.includes('kinh te')) return 'Tổ Văn - GDKTPL';
+  if (clean.includes('van') || clean.includes('gdktpl') || clean.includes('kinh te') || clean.includes('phap luat')) return 'Tổ Văn - GDKTPL';
   if (clean.includes('hoa') || clean.includes('sinh')) return 'Tổ Hoá - Sinh';
-  if (clean.includes('su') || clean.includes('dia') || clean.includes('anh') || clean.includes('ngoai ngu')) return 'Tổ Sử - Địa - Anh Văn';
-  if (clean.includes('ly') || clean.includes('the duc') || clean.includes('td') || clean.includes('qp') || clean.includes('quoc phong')) return 'Tổ Lý - TD - QP';
-  if (clean.includes('tin') || clean.includes('cong nghe') || clean.includes('cntt')) return 'Tổ Tin - Công nghệ';
-  if (clean.includes('van phong') || clean.includes('ke toan') || clean.includes('y te') || clean.includes('thu vien')) return 'Tổ Văn Phòng';
+  if (clean.includes('su') || clean.includes('dia') || clean.includes('anh') || clean.includes('ngoai ngu') || clean.includes('tieng anh')) return 'Tổ Sử - Địa - Anh Văn';
+  if (clean.includes('ly') || clean.includes('the duc') || clean.includes('td') || clean.includes('qp') || clean.includes('quoc phong') || clean.includes('vat ly')) return 'Tổ Lý - TD - QP';
+  if (clean.includes('tin') || clean.includes('cong nghe') || clean.includes('cntt') || clean.includes('tin hoc')) return 'Tổ Tin - Công nghệ';
+  if (clean.includes('van phong') || clean.includes('ke toan') || clean.includes('y te') || clean.includes('thu vien') || clean.includes('thiet bi') || clean.includes('hanh chinh')) return 'Tổ Văn Phòng';
 
   return 'Tổ Toán';
 }
@@ -91,10 +92,11 @@ export function normalizePosition(posStr?: string): Teacher['position'] {
   if (!posStr) return 'Giáo viên THPT';
   const clean = posStr.trim().toLowerCase();
 
-  if (clean.includes('hieu truong') || clean.includes('bgh') || clean.includes('lanh dao')) return 'BGH / Lãnh đạo';
+  if (clean.includes('hieu truong') || clean.includes('bgh') || clean.includes('lanh dao') || clean.includes('pho hieu truong')) return 'Hiệu trưởng';
   if (clean.includes('to truong') || clean.includes('truong bo mon')) return 'Tổ trưởng chuyên môn';
   if (clean.includes('to pho') || clean.includes('pho to') || clean.includes('pho bo mon')) return 'Tổ phó chuyên môn';
   if (clean.includes('hop dong') || clean.includes('hdld') || clean.includes('hợp đồng')) return 'Hợp đồng lao động';
+  if (clean.includes('van phong') || clean.includes('ke toan') || clean.includes('y te') || clean.includes('thu vien')) return 'Nhân viên Văn phòng';
   return 'Giáo viên THPT';
 }
 
@@ -105,46 +107,20 @@ export function normalizeTitleGrade(gradeStr?: string): Teacher['titleGrade'] {
   if (!gradeStr) return 'Giáo viên THPT Hạng II';
   const clean = gradeStr.trim().toLowerCase();
 
-  if (clean.includes('hang i') || clean.includes('hạng 1') || clean.includes('hang 1') || clean.includes('hạng i')) return 'Giáo viên THPT Hạng I';
-  if (clean.includes('hang iii') || clean.includes('hạng 3') || clean.includes('hang 3') || clean.includes('hạng iii')) return 'Giáo viên THPT Hạng III';
+  if (clean.includes('hang i') || clean.includes('hạng 1') || clean.includes('hang 1') || clean.includes('hạng i') || clean.includes('hang i ')) return 'Giáo viên THPT Hạng I';
+  if (clean.includes('hang iii') || clean.includes('hạng 3') || clean.includes('hang 3') || clean.includes('hạng iii') || clean.includes('hang 3')) return 'Giáo viên THPT Hạng III';
   return 'Giáo viên THPT Hạng II';
 }
 
 /**
- * Phân tích file Excel (.xlsx, .xls) hoặc CSV để nạp danh sách Giáo viên
+ * Trích xuất danh sách Giáo viên từ mảng hàng 2 chiều thô (raw 2D rows)
  */
-export async function parseTeachersExcelFile(file: File): Promise<ParseResult<ParsedTeacherRow>> {
-  // Kiểm tra đuôi file
-  const fileNameLower = file.name.toLowerCase();
-  if (fileNameLower.endsWith('.numbers')) {
-    throw new Error(
-      'File của bạn có định dạng Apple Numbers (.numbers). Vui lòng mở file trên máy Mac/iPhone, chọn "File" > "Export To" > "Excel (.xlsx)" hoặc "CSV" trước khi tải lên hệ thống EduEval.'
-    );
+export function extractTeachersFromRaw2DMatrix(rawRows: any[][]): ParseResult<ParsedTeacherRow> {
+  if (!rawRows || rawRows.length < 2) {
+    throw new Error('Dữ liệu không có đủ hàng để xử lý (tối thiểu 1 hàng tiêu đề và 1 hàng dữ liệu).');
   }
 
-  const XLSX = await getXLSX();
-  const buffer = await file.arrayBuffer();
-
-  let workbook: any;
-  try {
-    workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-  } catch (err: any) {
-    throw new Error('Không thể đọc file bảng tính. File có thể bị hỏng hoặc sai định dạng Excel chuẩn.');
-  }
-
-  const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) {
-    throw new Error('File Excel không có trang tính (sheet) nào chứa dữ liệu.');
-  }
-
-  const worksheet = workbook.Sheets[firstSheetName];
-  const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-
-  if (rawRows.length < 2) {
-    throw new Error('File Excel không có hàng dữ liệu nào sau tiêu đề.');
-  }
-
-  // Tìm hàng tiêu đề (header row)
+  // Tìm hàng tiêu đề (header row) - Quét tối đa 10 dòng đầu
   let headerRowIndex = 0;
   let codeCol = -1;
   let nameCol = -1;
@@ -155,18 +131,34 @@ export async function parseTeachersExcelFile(file: File): Promise<ParseResult<Pa
   let emailCol = -1;
   let phoneCol = -1;
 
-  for (let r = 0; r < Math.min(5, rawRows.length); r++) {
-    const row = rawRows[r].map((cell) => normalizeHeaderName(String(cell)));
+  for (let r = 0; r < Math.min(10, rawRows.length); r++) {
+    const row = rawRows[r].map((cell) => normalizeHeaderName(String(cell || '')));
     for (let c = 0; c < row.length; c++) {
       const h = row[c];
-      if (h.includes('magv') || h.includes('maso') || h.includes('code')) codeCol = c;
-      if (h.includes('hovaten') || h.includes('hoten') || h.includes('tengv') || h.includes('ten') || h.includes('fullname')) nameCol = c;
-      if (h.includes('tochuyenmon') || h.includes('tobomon') || h.includes('to') || h.includes('department')) deptCol = c;
-      if (h.includes('chucvu') || h.includes('vitri') || h.includes('position')) posCol = c;
-      if (h.includes('hangchucdanh') || h.includes('hang') || h.includes('chucdanh') || h.includes('grade')) gradeCol = c;
-      if (h.includes('thamnien') || h.includes('sonam') || h.includes('namcongtac') || h.includes('years')) yearsCol = c;
-      if (h.includes('email') || h.includes('thudientu') || h.includes('mail')) emailCol = c;
-      if (h.includes('sodienthoai') || h.includes('sdt') || h.includes('dienthoai') || h.includes('phone')) phoneCol = c;
+      if (h.includes('magv') || h.includes('maso') || h.includes('macb') || h.includes('code') || h.includes('id') || (h.startsWith('ma') && !h.includes('mail'))) {
+        if (codeCol === -1) codeCol = c;
+      }
+      if (h.includes('hovaten') || h.includes('hoten') || h.includes('tengv') || h.includes('ten') || h.includes('fullname') || h.includes('name') || h.includes('giaovien') || h.includes('canbo')) {
+        if (nameCol === -1) nameCol = c;
+      }
+      if (h.includes('tochuyenmon') || h.includes('tobomon') || h.includes('to') || h.includes('bomon') || h.includes('department') || h.includes('dept') || h.includes('phongban')) {
+        if (deptCol === -1) deptCol = c;
+      }
+      if (h.includes('chucvu') || h.includes('vitri') || h.includes('position') || h.includes('pos') || h.includes('vaitro') || h.includes('chucdanh')) {
+        if (posCol === -1) posCol = c;
+      }
+      if (h.includes('hangchucdanh') || h.includes('hang') || h.includes('grade') || h.includes('ngach')) {
+        if (gradeCol === -1) gradeCol = c;
+      }
+      if (h.includes('thamnien') || h.includes('sonam') || h.includes('namcongtac') || h.includes('years') || h.includes('nam')) {
+        if (yearsCol === -1) yearsCol = c;
+      }
+      if (h.includes('email') || h.includes('thudientu') || h.includes('mail')) {
+        if (emailCol === -1) emailCol = c;
+      }
+      if (h.includes('sodienthoai') || h.includes('sdt') || h.includes('dienthoai') || h.includes('phone') || h.includes('tel')) {
+        if (phoneCol === -1) phoneCol = c;
+      }
     }
 
     if (nameCol !== -1) {
@@ -175,8 +167,7 @@ export async function parseTeachersExcelFile(file: File): Promise<ParseResult<Pa
     }
   }
 
-  // Nếu không tìm thấy header rõ ràng, mặc định theo vị trí cột mẫu:
-  // Cột 0: Mã GV, Cột 1: Họ tên, Cột 2: Tổ, Cột 3: Chức vụ, Cột 4: Hạng, Cột 5: Thâm niên, Cột 6: Email, Cột 7: SĐT
+  // Nếu không tìm thấy cột họ tên rõ ràng, fallback theo vị trí cột mẫu
   if (nameCol === -1) {
     headerRowIndex = 0;
     codeCol = 0;
@@ -194,16 +185,16 @@ export async function parseTeachersExcelFile(file: File): Promise<ParseResult<Pa
 
   for (let r = headerRowIndex + 1; r < rawRows.length; r++) {
     const row = rawRows[r];
-    if (!row || row.every((c: any) => String(c).trim() === '')) {
+    if (!row || row.every((c: any) => String(c || '').trim() === '')) {
       continue; // Bỏ qua hàng trống
     }
 
-    const rawName = String(row[nameCol] || '').trim();
+    const rawName = String(nameCol !== -1 && row[nameCol] ? row[nameCol] : '').trim();
     const rawCode = String(codeCol !== -1 && row[codeCol] ? row[codeCol] : '').trim();
     const rawDept = String(deptCol !== -1 && row[deptCol] ? row[deptCol] : '').trim();
     const rawPos = String(posCol !== -1 && row[posCol] ? row[posCol] : '').trim();
     const rawGrade = String(gradeCol !== -1 && row[gradeCol] ? row[gradeCol] : '').trim();
-    const rawYears = row[yearsCol] !== undefined ? Number(row[yearsCol]) : 5;
+    const rawYears = yearsCol !== -1 && row[yearsCol] !== undefined ? Number(row[yearsCol]) : 5;
     const rawEmail = String(emailCol !== -1 && row[emailCol] ? row[emailCol] : '').trim();
     const rawPhone = String(phoneCol !== -1 && row[phoneCol] ? row[phoneCol] : '').trim();
 
@@ -268,8 +259,189 @@ export async function parseTeachersExcelFile(file: File): Promise<ParseResult<Pa
     validRows,
     invalidRows,
     totalRows: rawRows.length - (headerRowIndex + 1),
-    sheetNames: workbook.SheetNames,
+    sheetNames: ['DuLieuGiaoVien'],
   };
+}
+
+/**
+ * Phân tích file Excel (.xlsx, .xls) hoặc CSV để nạp danh sách Giáo viên
+ */
+export async function parseTeachersExcelFile(file: File): Promise<ParseResult<ParsedTeacherRow>> {
+  const fileNameLower = file.name.toLowerCase();
+  if (fileNameLower.endsWith('.numbers')) {
+    throw new Error(
+      'File của bạn có định dạng Apple Numbers (.numbers). Vui lòng mở file trên máy Mac/iPhone, chọn "File" > "Export To" > "Excel (.xlsx)" hoặc "CSV" trước khi tải lên hệ thống EduEval.'
+    );
+  }
+
+  const XLSX = await getXLSX();
+  const buffer = await file.arrayBuffer();
+
+  let workbook: any;
+  try {
+    workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+  } catch (err: any) {
+    throw new Error('Không thể đọc file bảng tính. File có thể bị hỏng hoặc sai định dạng Excel chuẩn.');
+  }
+
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
+    throw new Error('File Excel không có trang tính (sheet) nào chứa dữ liệu.');
+  }
+
+  const worksheet = workbook.Sheets[firstSheetName];
+  const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+  const result = extractTeachersFromRaw2DMatrix(rawRows);
+  result.sheetNames = workbook.SheetNames;
+  return result;
+}
+
+/**
+ * Phân tích nội dung Copy-Paste trực tiếp từ Excel hoặc Google Sheets
+ */
+export function parsePastedSpreadsheetText(pastedText: string): ParseResult<ParsedTeacherRow> {
+  if (!pastedText || !pastedText.trim()) {
+    throw new Error('Chưa có nội dung dán từ bảng tính.');
+  }
+
+  const lines = pastedText.split(/\r\n|\n/).filter((l) => l.trim() !== '');
+  if (lines.length < 1) {
+    throw new Error('Nội dung dán không chứa hàng dữ liệu hợp lệ.');
+  }
+
+  // Nhận diện tab (\t) hoặc dấu phẩy (,) hoặc dấu chấm phẩy (;)
+  const sampleLine = lines[0];
+  let delimiter = '\t';
+  if (sampleLine.includes('\t')) {
+    delimiter = '\t';
+  } else if (sampleLine.includes(';') && (sampleLine.match(/;/g)?.length || 0) >= 3) {
+    delimiter = ';';
+  } else if (sampleLine.includes(',') && (sampleLine.match(/,/g)?.length || 0) >= 3) {
+    delimiter = ',';
+  }
+
+  const rawRows = lines.map((line) => {
+    return line.split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ''));
+  });
+
+  return extractTeachersFromRaw2DMatrix(rawRows);
+}
+
+/**
+ * Tải và phân tích từ Google Sheets công khai (Public CSV Link / Sheet ID)
+ */
+export async function fetchAndParseGoogleSheetUrl(sheetUrl: string): Promise<ParseResult<ParsedTeacherRow>> {
+  if (!sheetUrl || !sheetUrl.trim()) {
+    throw new Error('Vui lòng nhập đường link Google Sheets hợp lệ.');
+  }
+
+  let fetchUrl = sheetUrl.trim();
+  // Chuyển đổi link Google Sheet sang CSV export link nếu cần
+  const match = fetchUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    const sheetId = match[1];
+    fetchUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  }
+
+  const response = await fetch(fetchUrl);
+  if (!response.ok) {
+    throw new Error(`Không thể kết nối tới Google Sheets (${response.statusText}). Hãy chắc chắn rằng bảng tính Google Sheets của bạn đã được bật chế độ chia sẻ công khai ("Bất kỳ ai có liên kết đều có thể xem").`);
+  }
+
+  const csvText = await response.text();
+  return parsePastedSpreadsheetText(csvText);
+}
+
+/**
+ * Xuất Danh Sách 70 Tài Khoản Ra File Excel (.xlsx) Kèm Mật Khẩu
+ */
+export async function exportAccountsToExcel(
+  accounts: UserAccount[], 
+  academicYear: string = '2026 - 2027'
+): Promise<void> {
+  const XLSX = await getXLSX();
+
+  const data = accounts.map((acc, idx) => {
+    let roleText = 'Giáo viên (Tự chấm điểm & Kê khai)';
+    if (acc.role === 'ADMIN_PRINCIPAL') {
+      roleText = 'Ban Giám Hiệu / Admin (Toàn quyền quản trị & Ký số)';
+    } else if (acc.role === 'HEAD_OF_DEPARTMENT') {
+      roleText = 'Tổ trưởng / Tổ phó (Chấm điểm tổ & Duyệt cấp 1)';
+    }
+
+    return {
+      'STT': idx + 1,
+      'Mã Định Danh': acc.teacherId,
+      'Họ và Tên': acc.fullName,
+      'Tổ Chuyên Môn': acc.department,
+      'Chức Vụ': acc.position,
+      'Phân Quyền Hệ Thống': roleText,
+      'Tên Đăng Nhập (Username)': acc.username,
+      'Mật Khẩu Mặc Định (Password)': acc.passwordHash,
+      'Email Đăng Ký': acc.email || `${acc.username}@thptchauthanha.edu.vn`,
+      'Số Điện Thoại': acc.phone || '0900 000 000',
+      'Hướng Dẫn Đăng Nhập': 'Đăng nhập tại EduEval THPT Châu Thành A, tự đổi mật khẩu sau lần đăng nhập đầu tiên.',
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  worksheet['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 16 }, // Mã
+    { wch: 24 }, // Họ tên
+    { wch: 22 }, // Tổ
+    { wch: 22 }, // Chức vụ
+    { wch: 36 }, // Quyền
+    { wch: 24 }, // Username
+    { wch: 24 }, // Password
+    { wch: 32 }, // Email
+    { wch: 16 }, // SĐT
+    { wch: 55 }, // Ghi chú
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSach_TaiKhoan_70GV');
+
+  const fileName = `DanhSach_TaiKhoan_EduEval_70GV_THPT_ChauThanhA_${academicYear.replace(/\s+/g, '')}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+}
+
+/**
+ * Xuất Toàn Bộ 70 Giáo Viên Mẫu Ra File Excel (.xlsx) Chuẩn
+ */
+export async function export70TeachersSampleExcel(): Promise<void> {
+  const XLSX = await getXLSX();
+
+  const data = MOCK_TEACHERS.map((t, idx) => ({
+    'STT': idx + 1,
+    'Mã GV': t.code,
+    'Họ và Tên': t.fullName,
+    'Tổ Chuyên Môn': t.department,
+    'Chức Vụ': t.position,
+    'Hạng Chức Danh': t.titleGrade,
+    'Thâm Niên (Năm)': t.yearsOfTeaching,
+    'Email': t.email,
+    'Số Điện Thoại': t.phone,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  worksheet['!cols'] = [
+    { wch: 6 },
+    { wch: 16 },
+    { wch: 24 },
+    { wch: 22 },
+    { wch: 24 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 34 },
+    { wch: 16 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSach_70_GiaoVien_Mau');
+  XLSX.writeFile(workbook, 'DanhSach_Mau_70_GiaoVien_THPT_ChauThanhA.xlsx');
 }
 
 /**
@@ -301,20 +473,21 @@ export async function exportTeachersToExcel(
       'Số Điện Thoại': t.phone,
       'Năm Học': academicYear,
       'Đợt Đánh Giá': period,
-      'Điểm Chuyên Môn (40%)': ev?.scores['crit_1']?.principalScore ?? 85,
+      'Điểm Tự Chấm (40%)': ev?.scores['crit_1']?.selfScore ?? 85,
+      'Điểm Tổ Chấm (40%)': ev?.scores['crit_1']?.headScore ?? 85,
+      'Điểm BGH Chuyên Môn (40%)': ev?.scores['crit_1']?.principalScore ?? 85,
       'Điểm Kỷ Luật (20%)': ev?.scores['crit_2']?.principalScore ?? 90,
       'Điểm CNTT & AI (20%)': ev?.scores['crit_3']?.principalScore ?? 85,
       'Điểm Thi Đua (20%)': ev?.scores['crit_4']?.principalScore ?? 85,
       'Điểm Thụ Động (+/-)': ev?.passivePointsTotal ?? 0,
       'Điểm Tổng Kết': ev?.finalScore ?? 85.0,
       'Xếp Loại (NĐ 233)': ev?.classification ?? 'HTTNV',
-      'Trạng Thái Phê Duyệt': ev?.status === 'APPROVED' ? 'Đã Phê Duyệt (Ký Số NĐ 233)' : ev?.status === 'HEAD_REVIEWED' ? 'Tổ Trưởng Đã Duyệt' : 'Bản Thảo',
+      'Trạng Thái Phê Duyệt': ev?.status === 'APPROVED' ? 'Đã Phê Duyệt (Ký Số NĐ 233)' : ev?.status === 'HEAD_REVIEWED' ? 'Tổ Trưởng Đã Duyệt' : 'Bản Thảo Tự Chấm',
     };
   });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
 
-  // Căn chỉnh độ rộng các cột (Column Widths)
   worksheet['!cols'] = [
     { wch: 6 },  // STT
     { wch: 14 }, // Mã GV
@@ -327,14 +500,16 @@ export async function exportTeachersToExcel(
     { wch: 15 }, // SĐT
     { wch: 15 }, // Năm học
     { wch: 16 }, // Đợt
-    { wch: 18 }, // Tiêu chí 1
+    { wch: 18 }, // Điểm tự chấm
+    { wch: 18 }, // Điểm tổ chấm
+    { wch: 22 }, // Điểm BGH
     { wch: 18 }, // Tiêu chí 2
     { wch: 18 }, // Tiêu chí 3
     { wch: 18 }, // Tiêu chí 4
     { wch: 16 }, // Thụ động
     { wch: 16 }, // Điểm tổng kết
     { wch: 18 }, // Xếp loại
-    { wch: 24 }, // Trạng thái
+    { wch: 26 }, // Trạng thái
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -345,12 +520,12 @@ export async function exportTeachersToExcel(
 }
 
 /**
- * Xuất File Mẫu Excel (.xlsx) Để Người Dùng Nhập Dữ Liệu Giáo Viên
+ * Xuất File Mẫu Excel (.xlsx) Rỗng Để Người Dùng Nhập Dữ Liệu Giáo Viên
  */
 export async function exportTeacherTemplateExcel(): Promise<void> {
   const XLSX = await getXLSX();
 
-  // Sheet 1: Dữ liệu mẫu
+  // Sheet 1: Dữ liệu mẫu 6 giáo viên
   const sampleData = [
     {
       'Mã GV': 'GV-TOAN-101',
@@ -449,7 +624,7 @@ export async function exportTeacherTemplateExcel(): Promise<void> {
     {
       'Tên Cột': 'Chức Vụ',
       'Bắt Buộc': 'Không',
-      'Giá Trị Mẫu': 'Giáo viên THPT, Tổ trưởng chuyên môn, Tổ phó chuyên môn, BGH / Lãnh đạo',
+      'Giá Trị Mẫu': 'Giáo viên THPT, Tổ trưởng chuyên môn, Tổ phó chuyên môn, Hiệu trưởng',
       'Ghi Chú': 'Mặc định là "Giáo viên THPT"',
     },
     {
