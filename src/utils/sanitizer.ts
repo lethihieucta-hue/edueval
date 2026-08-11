@@ -9,7 +9,7 @@ export function isCorruptedString(str?: string | null): boolean {
   const s = String(str).trim();
   if (!s) return false;
 
-  // 1. Chứa ký tự thay thế lỗi UTF-8 (replacement character \uFFFD)
+  // 1. Chứa ký tự thay thế lỗi UTF-8 (replacement character \uFFFD hoặc dấu )
   if (s.includes('\uFFFD') || s.includes('')) {
     return true;
   }
@@ -22,9 +22,7 @@ export function isCorruptedString(str?: string | null): boolean {
     s.includes('\\3D-') ||
     s.includes('0C9C18') ||
     s.includes('B6C80DD3301') ||
-    s.includes('B995-4E35-AD') ||
-    s.includes('%bZB') ||
-    s.includes('^P')
+    s.includes('B995-4E35-AD')
   ) {
     return true;
   }
@@ -35,17 +33,6 @@ export function isCorruptedString(str?: string | null): boolean {
     return true;
   }
 
-  // 4. Quá nhiều ký tự biểu tượng/ký hiệu lạ không phải chữ cái tiếng Việt hoặc tiếng Anh
-  const cleanAlpha = s.replace(/[\p{L}\p{N}\s.,_()\-@]/gu, '');
-  if (s.length > 3 && cleanAlpha.length / s.length > 0.3) {
-    return true;
-  }
-
-  // 5. Tên quá ngắn vô nghĩa (chỉ 1 chữ cái kèm ký tự lạ)
-  if (s.length === 1 && !/[a-zA-Z0-9]/.test(s)) {
-    return true;
-  }
-
   return false;
 }
 
@@ -53,16 +40,11 @@ export function isCorruptedString(str?: string | null): boolean {
  * Kiểm tra một bản ghi Giáo viên có bị lỗi ký tự hay không
  */
 export function isCorruptedTeacher(t: Partial<Teacher>): boolean {
-  if (!t) return true;
+  if (!t) return false;
 
   // Tên bị rỗng hoặc lỗi chuỗi
-  if (!t.fullName || typeof t.fullName !== 'string') return true;
+  if (!t.fullName || typeof t.fullName !== 'string') return false;
   if (isCorruptedString(t.fullName)) return true;
-
-  // Tên quá ngắn vô nghĩa như "V", "^P", "~"
-  const trimmedName = t.fullName.trim();
-  if (trimmedName.length <= 1) return true;
-  if (/^[\^~*!@#$%&()_+=\-[\]{};:'",.<>?/\\|`~]+$/.test(trimmedName)) return true;
 
   // Mã GV bị lỗi
   if (t.code && isCorruptedString(t.code)) return true;
