@@ -16,8 +16,16 @@ import {
   Sparkles,
   ChevronRight,
   Filter,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download,
+  Upload,
+  AlertTriangle,
+  RotateCcw,
+  RefreshCw
 } from 'lucide-react';
+import { isCorruptedTeacher, cleanTeachersList } from '../../utils/sanitizer';
+import { exportTeachersToExcel } from '../../services/excelService';
+import { MOCK_TEACHERS } from '../../data/mockData';
 
 interface AdminDeptStaffTabProps {
   departments: DepartmentInfo[];
@@ -217,6 +225,35 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
     }
   };
 
+  // Phát hiện giáo viên bị lỗi
+  const corruptedTeachers = teachers.filter(isCorruptedTeacher);
+  const corruptedCount = corruptedTeachers.length;
+
+  const handleCleanCorrupted = () => {
+    const { cleanTeachers, removedCount } = cleanTeachersList(teachers);
+    setTeachers(cleanTeachers);
+    onAddAuditLog('DỌN DẸP DỮ LIỆU LỖI', 'Hệ thống', `Đã dọn dẹp và xoá bỏ ${removedCount} bản ghi giáo viên bị lỗi ký tự nhị phân`);
+    showToast(`Đã xoá sạch ${removedCount} giáo viên lỗi, phục hồi danh sách chuẩn!`);
+  };
+
+  const handleResetStandard = () => {
+    if (window.confirm('Bạn có chắc chắn muốn khôi phục lại danh sách 6 giáo viên mẫu chuẩn ban đầu của trường THPT Châu Thành A? Dữ liệu hiện tại sẽ được đặt lại theo danh sách chuẩn.')) {
+      setTeachers(MOCK_TEACHERS);
+      onAddAuditLog('KHÔI PHỤC DANH SÁCH CHUẨN', 'Hệ thống', 'Khôi phục danh sách 6 giáo viên chuẩn ban đầu.');
+      showToast('Đã khôi phục danh sách 6 giáo viên mẫu chuẩn thành công!');
+    }
+  };
+
+  const handleDirectExportExcel = async () => {
+    try {
+      await exportTeachersToExcel(teachers);
+      onAddAuditLog('XUẤT FILE EXCEL DANH SÁCH GV', 'Hệ thống', `Đã xuất ${teachers.length} giáo viên ra file Excel .xlsx`);
+      showToast('Đã xuất file Excel (.xlsx) danh sách giáo viên thành công!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xuất file Excel');
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -225,6 +262,41 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
         <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 text-xs font-medium animate-bounce">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Warning Banner If Corrupted Data Found */}
+      {corruptedCount > 0 && (
+        <div className="bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border-2 border-rose-300 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <AlertTriangle className="w-6 h-6 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm md:text-base text-rose-950 flex items-center gap-2">
+                ⚠️ Phát Hiện {corruptedCount} Bản Ghi Giáo Viên Bị Lỗi Dữ Liệu Ký Tự Rác
+              </h4>
+              <p className="text-xs text-rose-800 mt-0.5">
+                Các bản ghi này do nạp nhầm file nhị phân (Numbers hoặc file hỏng). Bấm nút bên cạnh để xoá sạch ngay và giữ lại dữ liệu chuẩn.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleCleanCorrupted}
+              className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Xoá Sạch {corruptedCount} GV Lỗi Ngay</span>
+            </button>
+            <button
+              onClick={handleResetStandard}
+              className="flex items-center gap-1.5 bg-white hover:bg-rose-100 text-rose-800 border border-rose-300 text-xs font-bold px-3 py-2.5 rounded-xl transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Khôi Phục Chuẩn</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -243,20 +315,39 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
             Quản Lý Danh Sách Tổ Chuyên Môn & Tổ Viên
           </h1>
           <p className="text-xs md:text-sm text-slate-300 mt-1">
-            Chức năng dành cho Admin / BGH để thay đổi, cập nhật thông tin các Tổ bộ môn và danh sách giáo viên toàn trường.
+            Chức năng dành cho Admin / BGH để quản lý các Tổ bộ môn, danh sách giáo viên và nhập/xuất file Excel (.xlsx).
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            onClick={handleDirectExportExcel}
+            className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+            title="Xuất toàn bộ danh sách giáo viên ra file Excel .xlsx"
+          >
+            <Download className="w-4 h-4 text-emerald-200" />
+            <span>Xuất Excel (.xlsx)</span>
+          </button>
+
           {onOpenTemplateModal && (
             <button
               onClick={onOpenTemplateModal}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+              title="Mở cửa sổ nhập file Excel/CSV và tải file mẫu"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
-              <span>Xuất File Mẫu & Nhập CSV/Excel</span>
+              <FileSpreadsheet className="w-4 h-4 text-blue-100" />
+              <span>Nhập Excel / File Mẫu</span>
             </button>
           )}
+
+          <button
+            onClick={handleResetStandard}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 transition-all cursor-pointer"
+            title="Dọn dẹp và khôi phục danh sách 6 giáo viên chuẩn ban đầu"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <span>Dọn Dẹp / Reset</span>
+          </button>
 
           <button
             onClick={() => handleOpenDeptModal()}
@@ -268,10 +359,10 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
 
           <button
             onClick={() => handleOpenStaffModal()}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-md transition-all cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Thêm Tổ Viên Mới</span>
+            <span>Thêm Tổ Viên</span>
           </button>
         </div>
       </div>
@@ -339,37 +430,61 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
 
           {/* Teachers Cards Table */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTeachers.map((t) => (
-              <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-3">
-                      <img src={t.avatar} alt={t.fullName} className="w-11 h-11 rounded-full object-cover border border-slate-200" />
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900">{t.fullName}</h3>
-                        <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                          {t.code}
+            {filteredTeachers.map((t) => {
+              const isCorrupt = isCorruptedTeacher(t);
+              return (
+                <div 
+                  key={t.id} 
+                  className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${
+                    isCorrupt 
+                      ? 'bg-rose-50/60 border-rose-400 ring-2 ring-rose-300/50' 
+                      : 'bg-white border-slate-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div>
+                    {isCorrupt && (
+                      <div className="mb-2 px-2.5 py-1 bg-rose-600 text-white text-[11px] font-bold rounded-lg flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" /> Dữ liệu bị lỗi ký tự
                         </span>
+                        <button
+                          onClick={() => handleDeleteStaff(t.id, t.fullName)}
+                          className="underline hover:text-rose-200 cursor-pointer"
+                        >
+                          Xoá dòng này
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-3">
+                        <img src={t.avatar} alt={t.fullName} className="w-11 h-11 rounded-full object-cover border border-slate-200" />
+                        <div>
+                          <h3 className={`font-bold text-sm ${isCorrupt ? 'text-rose-900 break-all' : 'text-slate-900'}`}>{t.fullName}</h3>
+                          <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            {t.code}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {!isCorrupt && (
+                          <button
+                            onClick={() => handleOpenStaffModal(t)}
+                            title="Chỉnh sửa thông tin"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteStaff(t.id, t.fullName)}
+                          title="Xóa giáo viên"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenStaffModal(t)}
-                        title="Chỉnh sửa thông tin"
-                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteStaff(t.id, t.fullName)}
-                        title="Xóa giáo viên"
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
 
                   <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-3">
                     <div className="flex items-center justify-between">

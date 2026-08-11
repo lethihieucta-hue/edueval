@@ -45,13 +45,39 @@ import { AIConsultantChatModal } from './components/AI/AIConsultantChatModal';
 import { ApiKeyGuideModal } from './components/Modals/ApiKeyGuideModal';
 import { syncGoogleSheetsData } from './services/apiClient';
 import { getStoredApiKey } from './services/geminiClient';
+import { cleanTeachersList } from './utils/sanitizer';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<Role>('ADMIN_PRINCIPAL');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   
-  // Data State
-  const [teachers, setTeachers] = useState<Teacher[]>(MOCK_TEACHERS);
+  // Data State with auto-sanitization and localStorage persistence
+  const [teachers, setTeachers] = useState<Teacher[]>(() => {
+    try {
+      const saved = localStorage.getItem('edueval_teachers_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const { cleanTeachers } = cleanTeachersList(parsed);
+          return cleanTeachers;
+        }
+      }
+    } catch (e) {
+      console.error('Error loading teachers from localStorage:', e);
+    }
+    return MOCK_TEACHERS;
+  });
+
+  // Save clean teachers to localStorage whenever updated
+  useEffect(() => {
+    try {
+      const { cleanTeachers } = cleanTeachersList(teachers);
+      localStorage.setItem('edueval_teachers_v2', JSON.stringify(cleanTeachers));
+    } catch (e) {
+      console.error('Error saving teachers to localStorage:', e);
+    }
+  }, [teachers]);
+
   const [departments, setDepartments] = useState<DepartmentInfo[]>(INITIAL_DEPARTMENT_INFOS);
   const [movements, setMovements] = useState<EmulationMovement[]>(INITIAL_EMULATION_MOVEMENTS);
   const [participations, setParticipations] = useState<MovementParticipation[]>(INITIAL_MOVEMENT_PARTICIPATIONS);

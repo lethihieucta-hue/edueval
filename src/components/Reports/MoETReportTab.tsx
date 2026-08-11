@@ -13,6 +13,7 @@ import {
   exportTeacherEvaluationToDocx, 
   exportAllTeachersSummaryDocx 
 } from '../../services/documentExportService';
+import { exportTeachersToExcel } from '../../services/excelService';
 
 interface MoETReportTabProps {
   teachers: Teacher[];
@@ -175,11 +176,18 @@ export const MoETReportTab: React.FC<MoETReportTabProps> = ({ teachers }) => {
           </button>
 
           <button
-            onClick={handleExportCSV}
+            onClick={async () => {
+              try {
+                await exportTeachersToExcel(teachers, `Bao_Cao_Tong_Hop_Danh_Gia_THPT_Chau_Thanh_A_${new Date().toISOString().slice(0, 10)}.xlsx`);
+              } catch (err: any) {
+                alert(err.message || 'Lỗi khi xuất file Excel');
+              }
+            }}
             className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+            title="Xuất bảng tổng hợp đánh giá toàn trường ra file Excel (.xlsx)"
           >
             <Download className="w-4 h-4" />
-            <span>Xuất Excel / CSV</span>
+            <span>Xuất Báo Cáo Excel (.xlsx)</span>
           </button>
 
           <button
