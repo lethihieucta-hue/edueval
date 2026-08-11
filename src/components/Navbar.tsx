@@ -7,12 +7,11 @@ import {
   RefreshCw, 
   Sparkles, 
   Search, 
-import { 
-  ShieldCheck, 
-  UserCheck, 
-  GraduationCap, 
-  RefreshCw, 
-  Sparkles, 
+  CheckCircle2, 
+  Key,
+  Calendar
+} from 'lucide-react';
+import { SUPPORTED_ACADEMIC_YEARS, EVALUATION_PERIODS } from '../utils/academicYear';
   Search, 
   CheckCircle2, 
   Key,
