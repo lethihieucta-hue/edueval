@@ -1,0 +1,6 @@
+{
+  "name": "EduEval - Teacher Performance & Evaluation Platform",
+  "description": "EduEval - Hệ thống chuyển đổi số đánh giá, xếp loại viên chức THPT CHÂU THÀNH A tự động, minh bạch, có xuất/nhập file mẫu CSV/Excel, AI Coaching IDP, ma trận trọng số Sandbox.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
