@@ -7,10 +7,10 @@ import { MOCK_TEACHERS } from '../data/mockData';
 export function isCorruptedString(str?: string | null): boolean {
   if (!str) return false;
   const s = String(str).trim();
-  if (!s) return false;
+  if (!s || s.length === 0) return false;
 
-  // 1. Chứa ký tự thay thế lỗi UTF-8 (replacement character \uFFFD hoặc dấu )
-  if (s.includes('\uFFFD') || s.includes('')) {
+  // 1. Chứa ký tự thay thế lỗi UTF-8
+  if (s.includes('\uFFFD')) {
     return true;
   }
 
@@ -41,19 +41,11 @@ export function isCorruptedString(str?: string | null): boolean {
  */
 export function isCorruptedTeacher(t: Partial<Teacher>): boolean {
   if (!t) return false;
-
-  // Tên bị rỗng hoặc lỗi chuỗi
   if (!t.fullName || typeof t.fullName !== 'string') return false;
+  
+  // Chỉ cảnh báo nếu tên hoặc mã chứa ký tự rác nhị phân
   if (isCorruptedString(t.fullName)) return true;
-
-  // Mã GV bị lỗi
   if (t.code && isCorruptedString(t.code)) return true;
-
-  // Email bị lỗi
-  if (t.email && isCorruptedString(t.email)) return true;
-
-  // Tổ chuyên môn bị lỗi
-  if (t.department && isCorruptedString(t.department)) return true;
 
   return false;
 }
@@ -85,7 +77,6 @@ export function cleanTeachersList(teachers: Teacher[]): {
     }
   }
 
-  // Nếu sau khi lọc danh sách rỗng, tự động khôi phục danh sách mẫu chuẩn
   const finalTeachers = cleanTeachers.length > 0 ? cleanTeachers : MOCK_TEACHERS;
 
   return {

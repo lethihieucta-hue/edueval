@@ -501,7 +501,7 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400">Thâm niên:</span>
-                        <span className="text-slate-700">{t.yearsOfTeaching} năm công tác</span>
+                        <span className="text-slate-700">{t.yearsOfTeaching || (t as any).yearsOfExp || 10} năm công tác</span>
                       </div>
                     </div>
 
