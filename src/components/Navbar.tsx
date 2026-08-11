@@ -164,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Action Tools & API Key Button */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
-            {/* MANDATORY API KEY BUTTON */}
+            {/* MANDATORY API KEY BUTTON (Theo AI_INSTRUCTIONS.md mục 2) */}
             <button
               onClick={onOpenApiKeyModal}
               title="Cài đặt API Key Gemini để sử dụng toàn bộ tính năng AI"

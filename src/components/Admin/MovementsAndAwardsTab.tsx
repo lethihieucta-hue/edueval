@@ -49,7 +49,7 @@ export const MovementsAndAwardsTab: React.FC<MovementsAndAwardsTabProps> = ({
   const [editingMovement, setEditingMovement] = useState<EmulationMovement | null>(null);
   const [movementForm, setMovementForm] = useState({
     title: '',
-    academicYear: '2025 - 2026',
+    academicYear: '2026 - 2027',
     startDate: '',
     endDate: '',
     description: '',

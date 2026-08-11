@@ -237,10 +237,10 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
   };
 
   const handleResetStandard = () => {
-    if (window.confirm('Bạn có chắc chắn muốn khôi phục lại danh sách 6 giáo viên mẫu chuẩn ban đầu của trường THPT Châu Thành A? Dữ liệu hiện tại sẽ được đặt lại theo danh sách chuẩn.')) {
+    if (window.confirm('Bạn có chắc chắn muốn khôi phục lại danh sách giáo viên mẫu chuẩn ban đầu (đầy đủ 6 nhóm chức vụ: BGH, Tổ trưởng, Tổ phó, Giáo viên, Tổ văn phòng, Hợp đồng lao động) của trường THPT Châu Thành A?')) {
       setTeachers(MOCK_TEACHERS);
-      onAddAuditLog('KHÔI PHỤC DANH SÁCH CHUẨN', 'Hệ thống', 'Khôi phục danh sách 6 giáo viên chuẩn ban đầu.');
-      showToast('Đã khôi phục danh sách 6 giáo viên mẫu chuẩn thành công!');
+      onAddAuditLog('KHÔI PHỤC DANH SÁCH CHUẨN', 'Hệ thống', 'Khôi phục danh sách giáo viên mẫu chuẩn ban đầu đầy đủ 6 nhóm chức vụ.');
+      showToast('Đã khôi phục danh sách giáo viên mẫu chuẩn thành công!');
     }
   };
 

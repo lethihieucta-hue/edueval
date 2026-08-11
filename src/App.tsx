@@ -58,10 +58,10 @@ export default function App() {
   });
   const [period, setPeriod] = useState<string>('Học kỳ I');
 
-  // Data State with auto-sanitization and localStorage persistence
+  // Data State with auto-sanitization and localStorage persistence (v3 with 6 groups)
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     try {
-      const saved = localStorage.getItem('edueval_teachers_v2');
+      const saved = localStorage.getItem('edueval_teachers_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -79,7 +79,7 @@ export default function App() {
   useEffect(() => {
     try {
       const { cleanTeachers } = cleanTeachersList(teachers);
-      localStorage.setItem('edueval_teachers_v2', JSON.stringify(cleanTeachers));
+      localStorage.setItem('edueval_teachers_v3', JSON.stringify(cleanTeachers));
     } catch (e) {
       console.error('Error saving teachers to localStorage:', e);
     }
