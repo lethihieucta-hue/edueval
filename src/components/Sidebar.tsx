@@ -32,6 +32,8 @@ interface SidebarProps {
   setActiveTab: (tab: TabType) => void;
   anomalyCount: number;
   pendingApprovalsCount: number;
+  academicYear?: string;
+  period?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -39,6 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   anomalyCount,
   pendingApprovalsCount,
+  academicYear = '2026 - 2027',
+  period = 'Học kỳ I'
 }) => {
   const menuItems = [
     {
@@ -61,20 +65,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'attendance_tardiness' as TabType,
-      label: 'Cập Nhật Vắng / Trễ',
-      sublabel: 'BGH & Admin điểm danh kỷ luật',
+      label: 'Chuyên Cần & Kỷ Luật',
+      sublabel: 'Đi trễ, bỏ tiết, vi phạm nếp sống',
       icon: Clock,
     },
     {
       id: 'self_declaration' as TabType,
       label: 'Tự Kê Khai & Duyệt 2 Lớp',
-      sublabel: 'GV tự nhập & Tổ trưởng/BGH duyệt',
+      sublabel: 'GV kê khai & Tổ trưởng/BGH duyệt',
       icon: ShieldCheck,
     },
     {
       id: 'matrix_sandbox' as TabType,
       label: 'Trọng Số & Sandbox',
-      sublabel: 'Ma trận & Giả lập kết quả',
+      sublabel: 'Điều chỉnh & Giả lập kết quả',
       icon: Sliders,
     },
     {
@@ -99,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'moet_reports' as TabType,
       label: 'Báo Cáo Chuẩn Bộ GD&ĐT',
-      sublabel: 'Nghị định 90/2020/NĐ-CP & In file',
+      sublabel: 'Nghị định 233/2026/NĐ-CP & In file',
       icon: FileText,
     },
   ];
@@ -111,12 +115,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
           <div className="flex items-center gap-2 text-slate-700 font-semibold text-xs mb-1">
             <BookOpen className="w-4 h-4 text-blue-600" />
-            <span>NĂM HỌC 2025 - 2026</span>
+            <span>NĂM HỌC {academicYear}</span>
           </div>
-          <p className="text-[11px] text-slate-500">Đợt đánh giá: <strong className="text-slate-700 font-semibold">Học kỳ I</strong></p>
+          <p className="text-[11px] text-slate-500">Đợt đánh giá: <strong className="text-slate-700 font-semibold">{period}</strong></p>
           <div className="mt-2 text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium border border-blue-100 flex items-center justify-between">
-            <span>Thời hạn khiếu nại:</span>
-            <span className="font-bold">Còn 5 ngày</span>
+            <span>Chuẩn đánh giá:</span>
+            <span className="font-bold">NĐ 233/2026</span>
           </div>
         </div>
 

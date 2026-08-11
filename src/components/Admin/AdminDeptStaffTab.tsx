@@ -544,6 +544,7 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
           {departments.map((d) => {
             const memberCount = teachers.filter((t) => t.department === d.name).length;
             const headTeacher = teachers.find((t) => t.department === d.name && t.position === 'Tổ trưởng chuyên môn');
+            const deputyHeadTeacher = teachers.find((t) => t.department === d.name && t.position === 'Tổ phó chuyên môn');
 
             return (
               <div key={d.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
@@ -579,6 +580,10 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Tổ trưởng chuyên môn:</span>
                       <strong className="text-slate-800">{d.headTeacherName || headTeacher?.fullName || 'Chưa phân công'}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Tổ phó chuyên môn:</span>
+                      <strong className="text-slate-700">{d.deputyHeadTeacherName || deputyHeadTeacher?.fullName || 'Chưa phân công'}</strong>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Số lượng tổ viên:</span>
@@ -722,10 +727,12 @@ export const AdminDeptStaffTab: React.FC<AdminDeptStaffTabProps> = ({
                   <select
                     value={teacherForm.position}
                     onChange={(e) => setTeacherForm({ ...teacherForm, position: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500 font-semibold"
                   >
                     <option value="Giáo viên THPT">Giáo viên THPT</option>
+                    <option value="Tổ phó chuyên môn">Tổ phó chuyên môn</option>
                     <option value="Tổ trưởng chuyên môn">Tổ trưởng chuyên môn</option>
+                    <option value="Hợp đồng lao động">Hợp đồng lao động</option>
                     <option value="Phó Hiệu trưởng">Phó Hiệu trưởng</option>
                     <option value="Hiệu trưởng">Hiệu trưởng</option>
                   </select>

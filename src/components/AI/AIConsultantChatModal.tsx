@@ -27,10 +27,11 @@ interface ChatMessage {
 }
 
 const SAMPLE_PROMPTS = [
-  'Quy định khống chế tối đa 20% Hoàn thành xuất sắc nhiệm vụ theo Nghị định 90/2020?',
+  'Quy định khống chế tối đa 20% Hoàn thành xuất sắc nhiệm vụ theo Nghị định 233/2026/NĐ-CP?',
+  'Chu kỳ năm học từ 2026-2027 sang 2027-2028 qua mốc tháng 7 được tính toán như thế nào?',
   'Chênh lệch điểm đánh giá giữa Tổ trưởng và Ban Giám hiệu quá 15% thì xử lý thế nào?',
-  'Cách xây dựng Lộ trình Phát triển Cá nhân (IDP) nâng cao kỹ năng ứng dụng AI cho giáo viên?',
-  'Quy trình giải quyết khiếu nại kết quả xếp loại thi đua viên chức THPT?'
+  'Cách xuất Phiếu đánh giá viên chức mẫu chuẩn Nghị định 233/2026/NĐ-CP ra file Word?',
+  'Cách xây dựng Lộ trình Phát triển Cá nhân (IDP) nâng cao kỹ năng ứng dụng AI cho giáo viên?'
 ];
 
 export const AIConsultantChatModal: React.FC<AIConsultantChatModalProps> = ({
@@ -44,20 +45,20 @@ export const AIConsultantChatModal: React.FC<AIConsultantChatModalProps> = ({
       id: 'welcome_1',
       sender: 'AI',
       text: `### 1. **Tóm lược tình huống/yêu cầu:**
-Kính chào Thầy/Cô! Tôi là **Trợ lý AI EdTech & Quản trị Đánh giá Viên chức THPT** (Sử dụng Google Gemini AI).
+Kính chào Thầy/Cô! Tôi là **Trợ lý AI EdTech & Tư Vấn Đánh Giá Viên Chức THPT** (Google Gemini AI).
 
 ### 2. **Giải pháp chi tiết:**
-- *Thao tác hệ thống:* Thầy/Cô có thể hỏi đáp trực tiếp về ma trận trọng số Sandbox, quy trình đối soát 360°, đối soát bất thường hoặc lập Lộ trình Khai vấn IDP cho giáo viên.
-- *Phân tích dữ liệu:* Dữ liệu được đồng bộ Real-time từ Sổ đầu bài điện tử, máy chấm công và Google Sheets.
-- *Khuyến nghị chuyên môn:* Khi thay đổi trọng số thi đua, hãy luôn dùng chế độ **Mô phỏng Sandbox** để kiểm thử phân bố xếp loại trước khi chính thức áp dụng.
+- *Thao tác hệ thống:* Thầy/Cô có thể hỏi đáp về quy định **Nghị định 233/2026/NĐ-CP**, tỷ lệ khống chế 20% Top Xuất sắc theo nhóm chức danh, đối soát 360°, xuất Phiếu đánh giá viên chức (.docx / .xlsx) hoặc lập Lộ trình IDP sư phạm.
+- *Quản lý năm học:* Tự động nhận diện chu kỳ năm học \`2026 - 2027\` và chuyển tiếp sang \`2027 - 2028\` sau mốc Tháng 7 năm 2027.
+- *Khuyến nghị chuyên môn:* Khi thay đổi trọng số thi đua, hãy luôn dùng chế độ **Mô phỏng Sandbox** để kiểm thử phân bố xếp loại trước khi chính thức phê duyệt và ký số.
 
 ### 3. **Căn cứ & Lưu ý:**
-Mọi dữ liệu đánh giá đều tuân thủ chuẩn **Nghị định 90/2020/NĐ-CP** và **Thông tư 20/2018/TT-BGDĐT**.
+Hệ thống tuân thủ nghiêm ngặt **Nghị định số 233/2026/NĐ-CP** và các Thông tư chuẩn nghề nghiệp giáo viên THPT của Bộ GD&ĐT.
 
 ### 4. **Hành động tiếp theo:**
 Thầy/Cô hãy chọn một trong các câu hỏi gợi ý nhanh bên dưới hoặc nhập thắc mắc của mình!`,
       timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      modelUsed: 'Gemini AI Sư Phạm',
+      modelUsed: 'Gemini AI Sư Phạm (NĐ 233)',
     },
   ]);
 

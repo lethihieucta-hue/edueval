@@ -93,7 +93,8 @@ export function normalizePosition(posStr?: string): Teacher['position'] {
 
   if (clean.includes('hieu truong') || clean.includes('bgh') || clean.includes('lanh dao')) return 'BGH / Lãnh đạo';
   if (clean.includes('to truong') || clean.includes('truong bo mon')) return 'Tổ trưởng chuyên môn';
-  if (clean.includes('to pho') || clean.includes('pho bo mon')) return 'Tổ phó chuyên môn';
+  if (clean.includes('to pho') || clean.includes('pho to') || clean.includes('pho bo mon')) return 'Tổ phó chuyên môn';
+  if (clean.includes('hop dong') || clean.includes('hdld') || clean.includes('hợp đồng')) return 'Hợp đồng lao động';
   return 'Giáo viên THPT';
 }
 
@@ -273,8 +274,14 @@ export async function parseTeachersExcelFile(file: File): Promise<ParseResult<Pa
 
 /**
  * Xuất Danh Sách Giáo Viên Ra File Excel (.xlsx) Đẹp Chuẩn Sư Phạm
+ * Theo Nghị định số 233/2026/NĐ-CP của Chính phủ
  */
-export async function exportTeachersToExcel(teachers: Teacher[], customFileName?: string): Promise<void> {
+export async function exportTeachersToExcel(
+  teachers: Teacher[], 
+  customFileName?: string,
+  academicYear: string = '2026 - 2027',
+  period: string = 'Học kỳ I'
+): Promise<void> {
   const XLSX = await getXLSX();
 
   // Lọc bỏ giáo viên lỗi trước khi xuất
@@ -292,14 +299,16 @@ export async function exportTeachersToExcel(teachers: Teacher[], customFileName?
       'Thâm Niên (Năm)': t.yearsOfTeaching,
       'Email': t.email,
       'Số Điện Thoại': t.phone,
+      'Năm Học': academicYear,
+      'Đợt Đánh Giá': period,
       'Điểm Chuyên Môn (40%)': ev?.scores['crit_1']?.principalScore ?? 85,
       'Điểm Kỷ Luật (20%)': ev?.scores['crit_2']?.principalScore ?? 90,
       'Điểm CNTT & AI (20%)': ev?.scores['crit_3']?.principalScore ?? 85,
       'Điểm Thi Đua (20%)': ev?.scores['crit_4']?.principalScore ?? 85,
       'Điểm Thụ Động (+/-)': ev?.passivePointsTotal ?? 0,
-      'Điểm Tổng Kết HK1': ev?.finalScore ?? 85.0,
-      'Xếp Loại Đánh Giá': ev?.classification ?? 'HTTNV',
-      'Trạng Thái Phê Duyệt': ev?.status === 'APPROVED' ? 'Đã Phê Duyệt (Ký Số)' : ev?.status === 'HEAD_REVIEWED' ? 'Tổ Trưởng Đã Duyệt' : 'Bản Thảo',
+      'Điểm Tổng Kết': ev?.finalScore ?? 85.0,
+      'Xếp Loại (NĐ 233)': ev?.classification ?? 'HTTNV',
+      'Trạng Thái Phê Duyệt': ev?.status === 'APPROVED' ? 'Đã Phê Duyệt (Ký Số NĐ 233)' : ev?.status === 'HEAD_REVIEWED' ? 'Tổ Trưởng Đã Duyệt' : 'Bản Thảo',
     };
   });
 
@@ -316,6 +325,8 @@ export async function exportTeachersToExcel(teachers: Teacher[], customFileName?
     { wch: 15 }, // Thâm Niên
     { wch: 32 }, // Email
     { wch: 15 }, // SĐT
+    { wch: 15 }, // Năm học
+    { wch: 16 }, // Đợt
     { wch: 18 }, // Tiêu chí 1
     { wch: 18 }, // Tiêu chí 2
     { wch: 18 }, // Tiêu chí 3
@@ -323,13 +334,13 @@ export async function exportTeachersToExcel(teachers: Teacher[], customFileName?
     { wch: 16 }, // Thụ động
     { wch: 16 }, // Điểm tổng kết
     { wch: 18 }, // Xếp loại
-    { wch: 22 }, // Trạng thái
+    { wch: 24 }, // Trạng thái
   ];
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSach_GiaoVien');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSach_GiaoVien_ND233');
 
-  const fileName = customFileName || `DanhSach_GiaoVien_THPT_ChauThanhA_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = customFileName || `DanhSach_GiaoVien_ND233_THPT_ChauThanhA_${academicYear.replace(/\s+/g, '')}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 

@@ -203,7 +203,7 @@ export const Evaluation360Tab: React.FC<Evaluation360TabProps> = ({
         <div className="flex items-center gap-2 text-xs">
           <span className="bg-emerald-50 text-emerald-700 font-bold px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Vai trò hiện tại: {currentRole === 'ADMIN_PRINCIPAL' ? 'Ban Giám Hiệu' : currentRole === 'HEAD_OF_DEPARTMENT' ? 'Tổ Trưởng' : 'Giáo Viên'}
+            Vai trò hiện tại: {currentRole === 'ADMIN_PRINCIPAL' ? 'Ban Giám Hiệu' : currentRole === 'HEAD_OF_DEPARTMENT' ? 'Tổ Trưởng / Tổ Phó Chuyên Môn' : 'Giáo Viên'}
           </span>
         </div>
       </div>
@@ -421,7 +421,7 @@ export const Evaluation360Tab: React.FC<Evaluation360TabProps> = ({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-semibold text-blue-700 block mb-1">Tổ Trưởng Chấm</label>
+                        <label className="text-[10px] font-semibold text-blue-700 block mb-1">Tổ Trưởng / Tổ Phó Chấm</label>
                         <input
                           type="number"
                           min={0}
@@ -448,7 +448,7 @@ export const Evaluation360Tab: React.FC<Evaluation360TabProps> = ({
                     {gap > 15 && (
                       <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded text-[11px] text-rose-700 font-medium flex items-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                        <span>Cảnh báo bất thường: Lệch {gap} điểm giữa Tổ trưởng & BGH!</span>
+                        <span>Cảnh báo bất thường: Lệch {gap} điểm giữa Tổ chuyên môn & BGH!</span>
                       </div>
                     )}
                   </div>

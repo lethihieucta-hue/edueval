@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ShieldAlert
 } from 'lucide-react';
+import { SUPPORTED_ACADEMIC_YEARS } from '../../utils/academicYear';
 
 interface MovementsAndAwardsTabProps {
   movements: EmulationMovement[];
@@ -516,12 +517,17 @@ export const MovementsAndAwardsTab: React.FC<MovementsAndAwardsTabProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Năm Học</label>
-                  <input
-                    type="text"
+                  <select
                     value={movementForm.academicYear}
                     onChange={(e) => setMovementForm({ ...movementForm, academicYear: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                  />
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
+                  >
+                    {SUPPORTED_ACADEMIC_YEARS.map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

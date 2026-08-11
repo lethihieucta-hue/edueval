@@ -122,7 +122,7 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
       `Tự kê khai: ${form.title} (${form.categoryOrLevel}) - Đề xuất: ${form.suggestedPoints > 0 ? '+' : ''}${form.suggestedPoints}đ`
     );
 
-    showToast(`Đã gửi tự kê khai! Hồ sơ đang ở Lớp 1 (Chờ Tổ trưởng chuyên môn xác minh).`);
+    showToast(`Đã gửi tự kê khai! Hồ sơ đang ở Lớp 1 (Chờ Tổ trưởng / Tổ phó chuyên môn xác minh).`);
     setIsDeclarationModalOpen(false);
     setForm({
       teacherId: currentTeacherId || teachers[0]?.id || 'gv_01',
@@ -146,21 +146,21 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
   const handleExecuteApproval = () => {
     if (!selectedRecordForApproval || !approvalActionType) return;
 
-    const currentUserName = currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng chuyên môn';
+    const currentUserName = currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng / Tổ phó chuyên môn';
     const nowStr = new Date().toLocaleString('vi-VN');
 
     setSelfDeclarations(prev => prev.map(rec => {
       if (rec.id !== selectedRecordForApproval.id) return rec;
 
       if (approvalActionType === 'HEAD_APPROVE') {
-        // Lớp 1 (Tổ trưởng) duyệt -> Chuyển sang Lớp 2 (BGH/Admin)
+        // Lớp 1 (Tổ trưởng / Tổ phó) duyệt -> Chuyển sang Lớp 2 (BGH/Admin)
         return {
           ...rec,
           status: 'PENDING_PRINCIPAL',
           headApproval: {
             approvedBy: currentUserName,
             approvedAt: nowStr,
-            comment: approvalComment || 'Tổ trưởng đã đối soát minh chứng hợp lệ.',
+            comment: approvalComment || 'Tổ trưởng / Tổ phó đã đối soát minh chứng hợp lệ.',
           }
         };
       } else if (approvalActionType === 'PRINCIPAL_APPROVE') {
@@ -210,7 +210,7 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
     );
 
     if (approvalActionType === 'HEAD_APPROVE') {
-      showToast(`[Lớp 1] Tổ trưởng đã xác minh sơ bộ! Đã chuyển BGH phê duyệt (Lớp 2).`);
+      showToast(`[Lớp 1] Tổ trưởng / Tổ phó đã xác minh sơ bộ! Đã chuyển BGH phê duyệt (Lớp 2).`);
     } else if (approvalActionType === 'PRINCIPAL_APPROVE') {
       showToast(`[Lớp 2] BGH đã phê duyệt chính thức! Điểm thi đua đã được tự động cộng/trừ vào hệ thống.`);
     } else {
@@ -350,7 +350,7 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
               className="bg-slate-50 border border-slate-200 text-xs text-slate-700 font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="ALL">Tất cả Trạng thái</option>
-              <option value="PENDING_HEAD">Chờ Lớp 1 (Tổ trưởng duyệt)</option>
+              <option value="PENDING_HEAD">Chờ Lớp 1 (Tổ trưởng / Tổ phó duyệt)</option>
               <option value="PENDING_PRINCIPAL">Chờ Lớp 2 (BGH/Admin duyệt)</option>
               <option value="APPROVED">Đã Phê Duyệt 2 Lớp (Đã Cộng/Trừ Điểm)</option>
               <option value="REJECTED">Đã Từ Chối</option>
@@ -476,7 +476,7 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
                               onClick={() => handleOpenApprovalModal(r, 'HEAD_APPROVE')}
                               className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-xs transition-all cursor-pointer w-full"
                             >
-                              Duyệt Lớp 1 (Tổ trưởng)
+                              Duyệt Lớp 1 (Tổ trưởng / Tổ phó)
                             </button>
                           )}
 

@@ -12,13 +12,13 @@ import {
 } from '../types';
 
 export const INITIAL_DEPARTMENT_INFOS: DepartmentInfo[] = [
-  { id: 'dept_1', name: 'Tổ Toán', headTeacherName: 'Trần Văn Hoàng', description: 'Toán học & Ứng dụng tư duy logic' },
-  { id: 'dept_2', name: 'Tổ Văn - GDKTPL', headTeacherName: 'Lê Thị Thu Hà', description: 'Ngữ văn & Giáo dục kinh tế và pháp luật' },
-  { id: 'dept_3', name: 'Tổ Hoá - Sinh', headTeacherName: 'Nguyễn Văn Minh', description: 'Hóa học, Sinh học & Nghiên cứu khoa học' },
-  { id: 'dept_4', name: 'Tổ Sử - Địa - Anh Văn', headTeacherName: 'Đỗ Thị Phương Thảo', description: 'Lịch sử, Địa lý & Tiếng Anh' },
-  { id: 'dept_5', name: 'Tổ Lý - TD - QP', headTeacherName: 'Phạm Minh Đức', description: 'Vật lý, Thể dục & Giáo dục quốc phòng' },
-  { id: 'dept_6', name: 'Tổ Tin - Công nghệ', headTeacherName: 'Hoàng Quốc Việt', description: 'Tin học, Công nghệ & Chuyển đổi số' },
-  { id: 'dept_7', name: 'Tổ Văn Phòng', headTeacherName: 'Nguyễn Thị Bích', description: 'Hành chính, Kế toán, Y tế & Thư viện' }
+  { id: 'dept_1', name: 'Tổ Toán', headTeacherName: 'Trần Văn Hoàng', deputyHeadTeacherName: 'Nguyễn Văn Đạt', description: 'Toán học & Ứng dụng tư duy logic' },
+  { id: 'dept_2', name: 'Tổ Văn - GDKTPL', headTeacherName: 'Lê Thị Thu Hà', deputyHeadTeacherName: 'Phạm Thị Mai', description: 'Ngữ văn & Giáo dục kinh tế và pháp luật' },
+  { id: 'dept_3', name: 'Tổ Hoá - Sinh', headTeacherName: 'Nguyễn Văn Minh', deputyHeadTeacherName: 'Trần Thị Thu Thảo', description: 'Hóa học, Sinh học & Nghiên cứu khoa học' },
+  { id: 'dept_4', name: 'Tổ Sử - Địa - Anh Văn', headTeacherName: 'Đỗ Thị Phương Thảo', deputyHeadTeacherName: 'Đặng Kim Ngân', description: 'Lịch sử, Địa lý & Tiếng Anh' },
+  { id: 'dept_5', name: 'Tổ Lý - TD - QP', headTeacherName: 'Phạm Minh Đức', deputyHeadTeacherName: 'Lê Quốc Hùng', description: 'Vật lý, Thể dục & Giáo dục quốc phòng' },
+  { id: 'dept_6', name: 'Tổ Tin - Công nghệ', headTeacherName: 'Hoàng Quốc Việt', deputyHeadTeacherName: 'Vũ Hoàng Nam', description: 'Tin học, Công nghệ & Chuyển đổi số' },
+  { id: 'dept_7', name: 'Tổ Văn Phòng', headTeacherName: 'Nguyễn Thị Bích', deputyHeadTeacherName: 'Lê Minh Tuấn', description: 'Hành chính, Kế toán, Y tế & Thư viện' }
 ];
 
 export const INITIAL_EMULATION_MOVEMENTS: EmulationMovement[] = [
@@ -516,7 +516,7 @@ export const MOCK_TEACHERS: Teacher[] = [
     email: 'duc.pham@thptchauthanha.edu.vn',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     department: 'Tổ Lý - TD - QP',
-    position: 'Giáo viên THPT',
+    position: 'Tổ phó chuyên môn',
     titleGrade: 'Giáo viên THPT Hạng II',
     yearsOfTeaching: 9,
     phone: '0977 889 900',
@@ -691,6 +691,122 @@ export const MOCK_TEACHERS: Teacher[] = [
       selfSubmittedAt: '2025-12-19 14:00',
       headApprovedAt: '2025-12-21 16:00',
       principalApprovedAt: '2025-12-24 16:40'
+    }
+  },
+  {
+    id: 'gv_07',
+    code: 'NV-VP-07',
+    fullName: 'Nguyễn Thị Bích',
+    email: 'bich.nguyen@thptchauthanha.edu.vn',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    department: 'Tổ Văn Phòng',
+    position: 'Nhân viên Văn phòng',
+    titleGrade: 'Giáo viên THPT Hạng II',
+    yearsOfTeaching: 11,
+    phone: '0908 556 778',
+    skillDimensions: [
+      { dimensionName: 'Phẩm chất nhà giáo', score: 94, benchmarkScore: 90 },
+      { dimensionName: 'Phát triển chuyên môn', score: 90, benchmarkScore: 85 },
+      { dimensionName: 'Năng lực sư phạm', score: 88, benchmarkScore: 85 },
+      { dimensionName: 'Ứng dụng CNTT & AI', score: 92, benchmarkScore: 80 },
+      { dimensionName: 'Xây dựng môi trường & Thi đua', score: 90, benchmarkScore: 85 }
+    ],
+    performanceTrend: [
+      { period: 'Tháng 9', score: 88 },
+      { period: 'Tháng 10', score: 90 },
+      { period: 'Tháng 11', score: 91 },
+      { period: 'Tháng 12', score: 92 }
+    ],
+    passiveLogs: [
+      {
+        id: 'pl_08',
+        teacherId: 'gv_07',
+        type: 'BONUS',
+        source: 'GOOGLE_SHEETS_SYNC',
+        title: 'Quản lý hồ sơ văn thư số hoá 100%',
+        description: 'Số hoá và lưu trữ toàn bộ hồ sơ nhà trường đúng thời hạn.',
+        points: 3.0,
+        timestamp: '2025-12-05 10:00',
+        verified: true
+      }
+    ],
+    evidences: [],
+    currentEvaluation: {
+      id: 'eval_gv_07',
+      teacherId: 'gv_07',
+      period: 'Học kỳ I (2025-2026)',
+      status: 'APPROVED',
+      passivePointsTotal: 3.0,
+      finalScore: 91.0,
+      classification: 'HTXSNV',
+      isAnomaly: false,
+      scores: {
+        crit_1: { criteriaId: 'crit_1', selfScore: 92, headScore: 90, principalScore: 90 },
+        crit_2: { criteriaId: 'crit_2', selfScore: 95, headScore: 95, principalScore: 95 },
+        crit_3: { criteriaId: 'crit_3', selfScore: 90, headScore: 90, principalScore: 90 },
+        crit_4: { criteriaId: 'crit_4', selfScore: 90, headScore: 90, principalScore: 90 }
+      },
+      selfSubmittedAt: '2025-12-20 10:00',
+      headApprovedAt: '2025-12-22 14:00',
+      principalApprovedAt: '2025-12-24 17:00'
+    }
+  },
+  {
+    id: 'gv_08',
+    code: 'GV-HD-08',
+    fullName: 'Lê Quốc Hùng',
+    email: 'hung.le@thptchauthanha.edu.vn',
+    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    department: 'Tổ Tin - Công nghệ',
+    position: 'Hợp đồng lao động',
+    titleGrade: 'Giáo viên THPT Hạng III',
+    yearsOfTeaching: 3,
+    phone: '0938 990 112',
+    skillDimensions: [
+      { dimensionName: 'Phẩm chất nhà giáo', score: 90, benchmarkScore: 90 },
+      { dimensionName: 'Phát triển chuyên môn', score: 86, benchmarkScore: 85 },
+      { dimensionName: 'Năng lực sư phạm', score: 85, benchmarkScore: 85 },
+      { dimensionName: 'Ứng dụng CNTT & AI', score: 95, benchmarkScore: 80 },
+      { dimensionName: 'Xây dựng môi trường & Thi đua', score: 88, benchmarkScore: 85 }
+    ],
+    performanceTrend: [
+      { period: 'Tháng 9', score: 85 },
+      { period: 'Tháng 10', score: 87 },
+      { period: 'Tháng 11', score: 89 },
+      { period: 'Tháng 12', score: 90 }
+    ],
+    passiveLogs: [
+      {
+        id: 'pl_09',
+        teacherId: 'gv_08',
+        type: 'BONUS',
+        source: 'GOOGLE_SHEETS_SYNC',
+        title: 'Hỗ trợ bảo trì phòng máy tính học sinh',
+        description: 'Cài đặt và cấu hình phần mềm lập trình cho 50 máy tính.',
+        points: 2.5,
+        timestamp: '2025-11-15 14:30',
+        verified: true
+      }
+    ],
+    evidences: [],
+    currentEvaluation: {
+      id: 'eval_gv_08',
+      teacherId: 'gv_08',
+      period: 'Học kỳ I (2025-2026)',
+      status: 'APPROVED',
+      passivePointsTotal: 2.5,
+      finalScore: 87.5,
+      classification: 'HTTNV',
+      isAnomaly: false,
+      scores: {
+        crit_1: { criteriaId: 'crit_1', selfScore: 88, headScore: 85, principalScore: 85 },
+        crit_2: { criteriaId: 'crit_2', selfScore: 92, headScore: 90, principalScore: 90 },
+        crit_3: { criteriaId: 'crit_3', selfScore: 95, headScore: 92, principalScore: 92 },
+        crit_4: { criteriaId: 'crit_4', selfScore: 85, headScore: 85, principalScore: 85 }
+      },
+      selfSubmittedAt: '2025-12-20 11:30',
+      headApprovedAt: '2025-12-22 15:00',
+      principalApprovedAt: '2025-12-24 17:15'
     }
   }
 ];

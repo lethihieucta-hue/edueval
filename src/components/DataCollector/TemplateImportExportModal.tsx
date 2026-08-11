@@ -95,7 +95,9 @@ export const TemplateImportExportModal: React.FC<TemplateImportExportModalProps>
       sampleData = 
         'GV-TOAN-101,Nguyễn Văn An,Tổ Toán,Giáo viên THPT,Giáo viên THPT Hạng II,12,nguyenvanan@thptchauthanha.edu.vn,0912345678\n' +
         'GV-VAN-102,Lê Thị Mai,Tổ Văn - GDKTPL,Tổ trưởng chuyên môn,Giáo viên THPT Hạng I,18,lethimai@thptchauthanha.edu.vn,0987654321\n' +
-        'GV-LY-103,Trần Quốc Bảo,Tổ Lý - TD - QP,Giáo viên THPT,Giáo viên THPT Hạng III,4,tranquocbao@thptchauthanha.edu.vn,0909123456\n';
+        'GV-SU-103,Đặng Kim Ngân,Tổ Sử - Địa - Anh Văn,Tổ phó chuyên môn,Giáo viên THPT Hạng I,15,dangkimngan@thptchauthanha.edu.vn,0909123456\n' +
+        'GV-HD-104,Lê Quốc Hùng,Tổ Tin - Công nghệ,Hợp đồng lao động,Giáo viên THPT Hạng III,3,lequochung@thptchauthanha.edu.vn,0938990112\n' +
+        'NV-VP-105,Nguyễn Thị Bích,Tổ Văn Phòng,Nhân viên Văn phòng,Giáo viên THPT Hạng II,11,nguyenthibich@thptchauthanha.edu.vn,0908556778\n';
     } else if (type === 'DECLARATIONS') {
       filename = 'Mau_Import_TuKeKhai_PhongTrao_EduEval.csv';
       headers = 'Mã GV hoặc Tên GV,Loại Khai Báo (BONUS/PENALTY),Cấp / Danh Mục,Tên Phong Trào hoặc Lỗi Vi Phạm,Giải Thưởng hoặc Chi Tiết,Điểm Đề Xuất (+/-),Minh Chứng / Mô Tả\n';
@@ -231,7 +233,7 @@ export const TemplateImportExportModal: React.FC<TemplateImportExportModalProps>
           currentEvaluation: {
             id: `eval_${teacherId}`,
             teacherId: teacherId,
-            period: 'Học kỳ I (2025-2026)',
+            period: 'Học kỳ I (2026 - 2027)',
             status: 'DRAFT',
             passivePointsTotal: 0,
             finalScore: 85.0,

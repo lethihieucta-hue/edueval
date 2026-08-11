@@ -20,6 +20,8 @@ export interface DepartmentInfo {
   name: string;
   headTeacherId?: string;
   headTeacherName?: string;
+  deputyHeadTeacherId?: string;
+  deputyHeadTeacherName?: string;
   description?: string;
 }
 
@@ -173,7 +175,7 @@ export interface Teacher {
   email: string;
   avatar: string;
   department: Department;
-  position: 'Hiệu trưởng' | 'Phó Hiệu trưởng' | 'Tổ trưởng chuyên môn' | 'Giáo viên THPT';
+  position: 'Hiệu trưởng' | 'Phó Hiệu trưởng' | 'Tổ trưởng chuyên môn' | 'Tổ phó chuyên môn' | 'Giáo viên THPT' | 'Nhân viên Văn phòng' | 'Hợp đồng lao động' | string;
   titleGrade: 'Giáo viên THPT Hạng I' | 'Giáo viên THPT Hạng II' | 'Giáo viên THPT Hạng III';
   yearsOfTeaching: number;
   phone: string;

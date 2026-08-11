@@ -46,11 +46,18 @@ import { ApiKeyGuideModal } from './components/Modals/ApiKeyGuideModal';
 import { syncGoogleSheetsData } from './services/apiClient';
 import { getStoredApiKey } from './services/geminiClient';
 import { cleanTeachersList } from './utils/sanitizer';
+import { getAutoAcademicYear } from './utils/academicYear';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<Role>('ADMIN_PRINCIPAL');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   
+  // Quản lý Năm học & Đợt đánh giá linh hoạt (tự động tính theo mốc tháng 7)
+  const [academicYear, setAcademicYear] = useState<string>(() => {
+    return getAutoAcademicYear();
+  });
+  const [period, setPeriod] = useState<string>('Học kỳ I');
+
   // Data State with auto-sanitization and localStorage persistence
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     try {
@@ -136,7 +143,7 @@ export default function App() {
     const newLog: AuditLogItem = {
       id: `log_${Date.now()}`,
       timestamp: new Date().toLocaleString('vi-VN'),
-      actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng Nguyễn Minh Trí' : (currentRole === 'HEAD_OF_DEPARTMENT' ? 'Tổ trưởng chuyên môn' : 'Giáo viên'),
+      actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng Nguyễn Minh Trí' : (currentRole === 'HEAD_OF_DEPARTMENT' ? 'Tổ trưởng / Tổ phó chuyên môn' : 'Giáo viên'),
       actorRole: currentRole,
       action: evaluation.digitalSignature ? 'KÝ SỐ PHÊ DUYỆT ĐÁNH GIÁ' : 'CẬP NHẬT ĐIỂM ĐÁNH GIÁ',
       targetTeacherName: targetTeacher?.fullName || teacherId,
@@ -258,6 +265,10 @@ export default function App() {
         setSelectedDepartment={setSelectedDepartment}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        academicYear={academicYear}
+        setAcademicYear={setAcademicYear}
+        period={period}
+        setPeriod={setPeriod}
         onOpenAIChat={() => setIsAIChatOpen(true)}
         onSyncSheets={handleSyncSheets}
         isSyncing={isSyncing}
@@ -275,6 +286,8 @@ export default function App() {
           setActiveTab={setActiveTab}
           anomalyCount={anomalyCount}
           pendingApprovalsCount={pendingApprovalsCount}
+          academicYear={academicYear}
+          period={period}
         />
 
         {/* Tab Content Area */}
@@ -372,7 +385,7 @@ export default function App() {
                 const newLog: AuditLogItem = {
                   id: `log_sd_${Date.now()}`,
                   timestamp: new Date().toLocaleString('vi-VN'),
-                  actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng chuyên môn',
+                  actorName: currentRole === 'ADMIN_PRINCIPAL' ? 'Hiệu trưởng / BGH' : 'Tổ trưởng / Tổ phó chuyên môn',
                   actorRole: currentRole,
                   action,
                   targetTeacherName: targetName,
@@ -424,7 +437,11 @@ export default function App() {
           )}
 
           {activeTab === 'moet_reports' && (
-            <MoETReportTab teachers={filteredTeachers} />
+            <MoETReportTab 
+              teachers={filteredTeachers} 
+              academicYear={academicYear}
+              period={period}
+            />
           )}
         </main>
 

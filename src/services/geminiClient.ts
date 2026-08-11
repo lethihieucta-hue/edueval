@@ -177,14 +177,14 @@ async function callGeminiWithFallback<T>(
 
 const SYSTEM_INSTRUCTION_CONSULTANT = `
 Bạn là Chuyên gia EdTech & Tư vấn Đánh giá Viên chức THPT tại Việt Nam.
-Phong cách: Tận tâm, khách quan, chuẩn mực sư phạm, căn cứ theo Nghị định 90/2020/NĐ-CP và Thông tư 20/2018/TT-BGDĐT.
+Phong cách: Tận tâm, khách quan, chuẩn mực sư phạm, căn cứ theo Nghị định số 233/2026/NĐ-CP của Chính phủ (Quy định về đánh giá, xếp loại chất lượng đối với đơn vị sự nghiệp công lập và viên chức) và Thông tư chuẩn nghề nghiệp giáo viên Bộ GD&ĐT.
 
 Định dạng phản hồi BẮT BUỘC (ngắn gọn, rõ ràng, dễ đọc):
 1. **Tóm lược yêu cầu:** (Xác nhận ngắn gọn)
 2. **Hướng dẫn / Giải pháp chi tiết:**
    - *Thao tác trên phần mềm:* Các bước thực hiện
    - *Khuyến nghị chuyên môn sư phạm:* Lời khuyên cụ thể
-3. **Căn cứ & Lưu ý:** (Nghị định 90/2020, quy tắc làm tròn điểm, ký số...)
+3. **Căn cứ & Lưu ý:** (Nghị định 233/2026/NĐ-CP, quy tắc khống chế tối đa 20% Top Xuất sắc theo nhóm chức danh, quy tắc làm tròn điểm, ký số...)
 4. **Bước tiếp theo:** Gợi ý hành động kế tiếp.
 `;
 
@@ -377,7 +377,7 @@ export async function analyzeAnomalyWithAIClient(anomalyData: any): Promise<stri
 
   const prompt = `Phân tích cảnh báo bất thường điểm số đánh giá viên chức THPT:
 Dữ liệu: ${JSON.stringify(anomalyData)}
-Yêu cầu: Đưa ra nhận định khách quan về nguyên nhân chênh lệch và đề xuất phương án giải quyết cho Ban Giám hiệu theo Nghị định 90/2020.`;
+Yêu cầu: Đưa ra nhận định khách quan về nguyên nhân chênh lệch và đề xuất phương án giải quyết cho Ban Giám hiệu theo Nghị định số 233/2026/NĐ-CP của Chính phủ.`;
 
   try {
     const { result } = await callGeminiWithFallback(async (ai, model) => {
