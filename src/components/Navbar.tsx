@@ -12,12 +12,6 @@ import {
   Calendar
 } from 'lucide-react';
 import { SUPPORTED_ACADEMIC_YEARS, EVALUATION_PERIODS } from '../utils/academicYear';
-  Search, 
-  CheckCircle2, 
-  Key,
-  Calendar
-} from 'lucide-react';
-import { SUPPORTED_ACADEMIC_YEARS, EVALUATION_PERIODS } from '../utils/academicYear';
 
 interface NavbarProps {
   currentRole: Role;
@@ -170,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Action Tools & API Key Button */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
-            {/* MANDATORY API KEY BUTTON (Theo AI_INSTRUCTIONS.md mục 2) */}
+            {/* MANDATORY API KEY BUTTON */}
             <button
               onClick={onOpenApiKeyModal}
               title="Cài đặt API Key Gemini để sử dụng toàn bộ tính năng AI"
