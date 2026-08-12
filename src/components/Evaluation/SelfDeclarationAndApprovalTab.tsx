@@ -599,7 +599,7 @@ export const SelfDeclarationAndApprovalTab: React.FC<SelfDeclarationAndApprovalT
                     required
                     value={form.awardNameOrInfraction}
                     onChange={(e) => setForm({ ...form, awardNameOrInfraction: e.target.value })}
-                    placeholder={form.type === 'BONUS_AWARD' ? "Giải Nhất / Giải Nhì / Giấy Khen..." : "Vắng trễ / Bỏ tiết / Chậm giáo án..."}
+                    placeholder={form.type === 'BONUS_AWARD' ? "Giải Nhất / Giải Nhì / Tham gia (không đạt giải) / Giấy Khen..." : "Vắng trễ / Bỏ tiết / Chậm giáo án / Thiếu tỉ lệ họp..."}
                     className="w-full p-2 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500"
                   />
                 </div>

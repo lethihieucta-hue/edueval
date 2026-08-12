@@ -11,7 +11,9 @@ import {
   SelfDeclarationRecord,
   UserAccount,
   Department,
-  AssessmentClassification
+  AssessmentClassification,
+  PerformanceCriterionRule,
+  TeacherPerformanceRecord
 } from '../types';
 
 export const INITIAL_DEPARTMENT_INFOS: DepartmentInfo[] = [
@@ -37,12 +39,15 @@ export const INITIAL_EMULATION_MOVEMENTS: EmulationMovement[] = [
       { id: 'r1', level: 'Cấp Trường', awardName: 'Giải Nhất', points: 3.0 },
       { id: 'r2', level: 'Cấp Trường', awardName: 'Giải Nhì', points: 2.0 },
       { id: 'r3', level: 'Cấp Trường', awardName: 'Giải Ba', points: 1.5 },
+      { id: 'r_part_school', level: 'Cấp Trường', awardName: 'Tham gia (không đạt giải)', points: 0.5 },
       { id: 'r4', level: 'Cấp Xã (Cụm Trường)', awardName: 'Giải Nhất', points: 5.0 },
       { id: 'r5', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhất', points: 8.0 },
       { id: 'r6', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhì', points: 6.0 },
       { id: 'r7', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Ba', points: 4.0 },
       { id: 'r8', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Khuyến Khích', points: 2.5 },
-      { id: 'r9', level: 'Cấp Quốc Gia', awardName: 'Giải Nhất', points: 10.0 }
+      { id: 'r_part_prov', level: 'Cấp Tỉnh / Thành phố', awardName: 'Tham gia (không đạt giải)', points: 1.5 },
+      { id: 'r9', level: 'Cấp Quốc Gia', awardName: 'Giải Nhất', points: 10.0 },
+      { id: 'r_part_nat', level: 'Cấp Quốc Gia', awardName: 'Tham gia (không đạt giải)', points: 2.5 }
     ]
   },
   {
@@ -57,8 +62,10 @@ export const INITIAL_EMULATION_MOVEMENTS: EmulationMovement[] = [
       { id: 'rg1', level: 'Cấp Trường', awardName: 'Giải Nhất', points: 4.0 },
       { id: 'rg2', level: 'Cấp Trường', awardName: 'Giải Nhì', points: 3.0 },
       { id: 'rg3', level: 'Cấp Trường', awardName: 'Giải Ba', points: 2.0 },
+      { id: 'rg_part', level: 'Cấp Trường', awardName: 'Tham gia (không đạt giải)', points: 1.0 },
       { id: 'rg4', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhất', points: 8.0 },
-      { id: 'rg5', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhì', points: 6.0 }
+      { id: 'rg5', level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhì', points: 6.0 },
+      { id: 'rg_part_prov', level: 'Cấp Tỉnh / Thành phố', awardName: 'Tham gia (không đạt giải)', points: 2.0 }
     ]
   }
 ];
@@ -432,3 +439,169 @@ export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
 ];
 
 export const INITIAL_APPEALS: AppealDispute[] = [];
+
+export const INITIAL_PERFORMANCE_CRITERIA: PerformanceCriterionRule[] = [
+  {
+    id: 'perf_crit_1',
+    title: 'Không đạt chỉ tiêu chuyên môn (Học lực / Tốt nghiệp / HSG)',
+    category: 'CHUYEN_MON',
+    type: 'PENALTY',
+    calcMode: 'PERCENTAGE',
+    basePoints: -1.5,
+    unitLabel: 'tỉ lệ % chưa đạt',
+    description: 'Trừ điểm theo tỉ lệ học sinh không đạt chuẩn học lực hoặc chất lượng bộ môn thấp hơn chỉ tiêu giao đầu năm.',
+    standardTarget: 'Đạt 100% chỉ tiêu giao của Tổ & Trường',
+    penaltyRateFormula: 'Thiếu dưới 10% chỉ tiêu: -1.0đ; Thiếu từ 10-20%: -2.0đ; Thiếu trên 20%: -3.0đ',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_2',
+    title: 'Tỉ lệ phụ huynh tham gia họp lớp thiếu so với chỉ tiêu',
+    category: 'CHU_NHIEM_HOP_PH',
+    type: 'PENALTY',
+    calcMode: 'PERCENTAGE',
+    basePoints: -1.0,
+    unitLabel: 'tỉ lệ % thiếu',
+    description: 'Trừ điểm giáo viên chủ nhiệm khi số lượng phụ huynh tham dự các kỳ họp phụ huynh định kỳ không đạt tỉ lệ yêu cầu.',
+    standardTarget: 'Sĩ số phụ huynh dự họp đạt >= 85%',
+    penaltyRateFormula: 'Tỉ lệ dự họp 75-84%: -0.5đ; 65-74%: -1.0đ; Dưới 65%: -2.0đ',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_3',
+    title: 'Vận động học sinh tham gia Bảo hiểm Y tế (BHYT) đạt tỉ lệ cao',
+    category: 'DOAN_THE_BHYT',
+    type: 'BONUS',
+    calcMode: 'PERCENTAGE',
+    basePoints: 2.0,
+    unitLabel: 'tỉ lệ % hoàn thành',
+    description: 'Cộng điểm thi đua cho giáo viên chủ nhiệm hoàn thành xuất sắc công tác vận động 100% học sinh tham gia BHYT đúng tiến độ.',
+    standardTarget: 'Đạt 100% học sinh tham gia BHYT đúng hạn',
+    penaltyRateFormula: 'Đạt 100% trước hạn: +2.0đ; Đạt 100% đúng hạn: +1.5đ; Đạt 95-99%: +0.5đ',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_4',
+    title: 'Kiêm nhiệm chức vụ quản lý, đoàn thể & tổ chuyên môn',
+    category: 'KIEM_NHIEM',
+    type: 'BONUS',
+    calcMode: 'PER_OCCURRENCE',
+    basePoints: 2.0,
+    unitLabel: 'điểm / chức vụ kiêm nhiệm',
+    description: 'Cộng điểm cho giáo viên đảm nhiệm các chức vụ kiêm nhiệm đóng góp công sức cho hoạt động chung của nhà trường.',
+    standardTarget: 'Có quyết định phân công kiêm nhiệm của Hiệu trưởng',
+    penaltyRateFormula: 'Bí thư Đoàn/Chủ tịch CĐ: +2.5đ; Tổ trưởng CM: +2.0đ; Tổ phó CM: +1.5đ; Trưởng ban TTND: +1.5đ; GV Chủ nhiệm: +1.0đ',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_5',
+    title: 'Vi phạm quy chế chuyên môn / Chậm nộp giáo án, sổ sách',
+    category: 'VI_PHAM_KHAC',
+    type: 'PENALTY',
+    calcMode: 'PER_OCCURRENCE',
+    basePoints: -1.0,
+    unitLabel: 'điểm / lần vi phạm',
+    description: 'Trừ điểm đối với các trường hợp nộp chậm kế hoạch bài dạy, sổ theo dõi đánh giá học sinh hoặc vi phạm quy chế hồ sơ sổ sách.',
+    standardTarget: 'Nộp đúng hạn theo lịch báo giảng hàng tuần',
+    penaltyRateFormula: 'Nộp trễ 1-2 ngày: -0.5đ/lần; Trễ > 3 ngày hoặc thiếu hồ sơ: -1.0đ/lần; Vi phạm quy chế thi/chấm thi: -2.5đ/lần',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_6',
+    title: 'Vi phạm kỷ luật & Nếp sống văn hóa sư phạm / Vắng họp',
+    category: 'VI_PHAM_KHAC',
+    type: 'PENALTY',
+    calcMode: 'PER_OCCURRENCE',
+    basePoints: -2.0,
+    unitLabel: 'điểm / lần vi phạm',
+    description: 'Trừ điểm khi vắng mặt không phép các buổi họp Hội đồng sư phạm, sinh hoạt chuyên môn hoặc vi phạm nếp sống văn hóa nhà trường.',
+    standardTarget: 'Tham gia đầy đủ 100% các cuộc họp và chấp hành nội quy',
+    penaltyRateFormula: 'Vắng họp có phép quá quy định: -0.5đ; Vắng họp không phép: -2.0đ/lần; Vi phạm nếp sống/ứng xử: -3.0đ/lần',
+    status: 'ACTIVE'
+  },
+  {
+    id: 'perf_crit_7',
+    title: 'Sáng kiến kinh nghiệm & Đề tài NCKH Sư phạm ứng dụng',
+    category: 'CHUYEN_MON',
+    type: 'BONUS',
+    calcMode: 'FIXED',
+    basePoints: 2.5,
+    unitLabel: 'điểm / đề tài đạt giải',
+    description: 'Cộng điểm khi có Sáng kiến kinh nghiệm hoặc Đề tài nghiên cứu khoa học sư phạm ứng dụng được Hội đồng cấp trường xếp loại Đạt/Khá trở lên.',
+    standardTarget: 'Được Hội đồng thẩm định cấp Trường công nhận',
+    penaltyRateFormula: 'SKKN cấp Trường xếp loại Xuất sắc: +3.0đ; Khá/Đạt: +2.0đ; SKKN cấp Tỉnh: +5.0đ',
+    status: 'ACTIVE'
+  }
+];
+
+export const INITIAL_PERFORMANCE_RECORDS: TeacherPerformanceRecord[] = [
+  {
+    id: 'perf_rec_1',
+    criterionId: 'perf_crit_3',
+    criterionTitle: 'Vận động học sinh tham gia Bảo hiểm Y tế (BHYT) đạt tỉ lệ cao',
+    category: 'DOAN_THE_BHYT',
+    type: 'BONUS',
+    teacherId: 'gv_toan_01',
+    teacherName: 'Đặng Minh Đỗ',
+    department: 'Tổ Toán',
+    metricValue: 'Lớp 12A1 đạt 100% BHYT trước hạn 2 tuần',
+    pointsAdjusted: 2.0,
+    recordedDate: '2026-10-20',
+    academicYear: '2026 - 2027',
+    period: 'Học kỳ I',
+    reasonOrEvidence: 'Báo cáo quyết toán BHYT học sinh năm học 2026-2027 của bộ phận Y tế học đường.',
+    recordedBy: 'Ban Giám Hiệu'
+  },
+  {
+    id: 'perf_rec_2',
+    criterionId: 'perf_crit_4',
+    criterionTitle: 'Kiêm nhiệm chức vụ quản lý, đoàn thể & tổ chuyên môn',
+    category: 'KIEM_NHIEM',
+    type: 'BONUS',
+    teacherId: 'gv_van_01',
+    teacherName: 'Danh Thanh Sang',
+    department: 'Tổ Văn - GDKTPL',
+    metricValue: 'Tổ trưởng Chuyên môn kiêm Ban Thanh tra ND',
+    pointsAdjusted: 2.5,
+    recordedDate: '2026-09-05',
+    academicYear: '2026 - 2027',
+    period: 'Học kỳ I',
+    reasonOrEvidence: 'Quyết định số 88/QĐ-THPTCTA về việc phân công nhiệm vụ cán bộ quản lý tổ và kiêm nhiệm.',
+    recordedBy: 'Ban Giám Hiệu'
+  },
+  {
+    id: 'perf_rec_3',
+    criterionId: 'perf_crit_2',
+    criterionTitle: 'Tỉ lệ phụ huynh tham gia họp lớp thiếu so với chỉ tiêu',
+    category: 'CHU_NHIEM_HOP_PH',
+    type: 'PENALTY',
+    teacherId: 'gv_hoa_02',
+    teacherName: 'Lê Văn Hiếu',
+    department: 'Tổ Hoá - Sinh',
+    metricValue: 'Sĩ số PH dự họp đạt 68% (thiếu 17% so với chuẩn)',
+    pointsAdjusted: -1.0,
+    recordedDate: '2026-09-28',
+    academicYear: '2026 - 2027',
+    period: 'Học kỳ I',
+    reasonOrEvidence: 'Biên bản họp cha mẹ học sinh đầu năm học 2026-2027 lớp 10C3.',
+    recordedBy: 'Ban Giám Hiệu'
+  },
+  {
+    id: 'perf_rec_4',
+    criterionId: 'perf_crit_5',
+    criterionTitle: 'Vi phạm quy chế chuyên môn / Chậm nộp giáo án, sổ sách',
+    category: 'VI_PHAM_KHAC',
+    type: 'PENALTY',
+    teacherId: 'gv_su_03',
+    teacherName: 'Trần Thị Thu Hà',
+    department: 'Tổ Sử - Địa - Anh Văn',
+    metricValue: 'Nộp chậm kế hoạch bài dạy tuần 8 & 9',
+    pointsAdjusted: -1.0,
+    recordedDate: '2026-10-30',
+    academicYear: '2026 - 2027',
+    period: 'Học kỳ I',
+    reasonOrEvidence: 'Biên bản kiểm tra hồ sơ chuyên môn định kỳ tháng 10 của Tổ chuyên môn.',
+    recordedBy: 'Tổ Trưởng Chuyên Môn'
+  }
+];
+

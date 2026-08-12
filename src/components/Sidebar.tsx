@@ -12,13 +12,16 @@ import {
   Users,
   Flag,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  SlidersHorizontal
 } from 'lucide-react';
 
 export type TabType = 
   | 'overview' 
   | 'admin_dept_staff'
   | 'movements_awards'
+  | 'personal_performance'
   | 'attendance_tardiness'
   | 'self_declaration'
   | 'matrix_sandbox' 
@@ -62,6 +65,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Phong Trào & Điểm Giải',
       sublabel: 'Cập nhật phong trào, mức điểm',
       icon: Flag,
+    },
+    {
+      id: 'personal_performance' as TabType,
+      label: 'Hiệu Suất Cá Nhân',
+      sublabel: 'Cộng/trừ chỉ tiêu, BHYT, kiêm nhiệm, vi phạm',
+      icon: Zap,
     },
     {
       id: 'attendance_tardiness' as TabType,

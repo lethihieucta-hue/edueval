@@ -27,10 +27,55 @@ export interface DepartmentInfo {
 
 export interface AwardPointRule {
   id: string;
-  level: 'Cấp Trường' | 'Cấp Xã (Cụm Trường)' | 'Cấp Tỉnh / Thành phố' | 'Cấp Quốc Gia';
-  awardName: 'Giải Nhất' | 'Giải Nhì' | 'Giải Ba' | 'Giải Khuyến Khích' | 'Đạt giải / Giấy khen' | 'Bằng khen cấp Bộ/Tỉnh';
+  level: 'Cấp Trường' | 'Cấp Xã (Cụm Trường)' | 'Cấp Tỉnh / Thành phố' | 'Cấp Quốc Gia' | string;
+  awardName: 'Giải Nhất' | 'Giải Nhì' | 'Giải Ba' | 'Giải Khuyến Khích' | 'Đạt giải / Giấy khen' | 'Bằng khen cấp Bộ/Tỉnh' | 'Tham gia (không đạt giải)' | 'Tham gia nhưng không đạt giải' | string;
   points: number;
 }
+
+export type PerformanceCriterionType = 'BONUS' | 'PENALTY';
+
+export type PerformanceCriterionCategory = 
+  | 'CHUYEN_MON' 
+  | 'CHU_NHIEM_HOP_PH' 
+  | 'DOAN_THE_BHYT' 
+  | 'KIEM_NHIEM' 
+  | 'VI_PHAM_KHAC' 
+  | 'CUSTOM';
+
+export type PerformanceCalculationMode = 'FIXED' | 'PERCENTAGE' | 'PER_OCCURRENCE';
+
+export interface PerformanceCriterionRule {
+  id: string;
+  title: string;
+  category: PerformanceCriterionCategory;
+  type: PerformanceCriterionType; // BONUS (+) or PENALTY (-)
+  calcMode: PerformanceCalculationMode; // FIXED, PERCENTAGE, PER_OCCURRENCE
+  basePoints: number; // e.g. 2.0 or -1.5
+  unitLabel?: string; // e.g. "điểm / đợt", "% thiếu", "% đạt", "điểm / chức vụ", "điểm / lần"
+  description: string;
+  standardTarget?: string; // e.g. "Đạt >= 95% sĩ số", "100% BHYT", "Đúng hạn nộp"
+  penaltyRateFormula?: string; // e.g. "Dưới 80%: -1.0đ, Dưới 70%: -2.0đ"
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface TeacherPerformanceRecord {
+  id: string;
+  criterionId: string;
+  criterionTitle: string;
+  category: PerformanceCriterionCategory;
+  type: PerformanceCriterionType;
+  teacherId: string;
+  teacherName: string;
+  department: string;
+  metricValue?: string; // e.g. "Đạt 75% sĩ số họp PH", "Kiêm 2 chức vụ", "Tỉ lệ BHYT 100%"
+  pointsAdjusted: number; // e.g. +2.0 or -1.5
+  recordedDate: string;
+  academicYear: string;
+  period: string;
+  reasonOrEvidence: string;
+  recordedBy: string;
+}
+
 
 export type ApprovalStatus2Layer = 'PENDING_HEAD' | 'PENDING_PRINCIPAL' | 'APPROVED' | 'REJECTED';
 export type DeclarationType = 'BONUS_AWARD' | 'PENALTY_INFRACTION';

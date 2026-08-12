@@ -124,8 +124,10 @@ export const MovementsAndAwardsTab: React.FC<MovementsAndAwardsTabProps> = ({
         awardRules: [
           { id: `r1_${Date.now()}`, level: 'Cấp Trường', awardName: 'Giải Nhất', points: 3.0 },
           { id: `r2_${Date.now()}`, level: 'Cấp Trường', awardName: 'Giải Nhì', points: 2.0 },
-          { id: `r3_${Date.now()}`, level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhất', points: 8.0 },
-          { id: `r4_${Date.now()}`, level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhì', points: 6.0 },
+          { id: `r3_${Date.now()}`, level: 'Cấp Trường', awardName: 'Tham gia (không đạt giải)', points: 0.5 },
+          { id: `r4_${Date.now()}`, level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhất', points: 8.0 },
+          { id: `r5_${Date.now()}`, level: 'Cấp Tỉnh / Thành phố', awardName: 'Giải Nhì', points: 6.0 },
+          { id: `r6_${Date.now()}`, level: 'Cấp Tỉnh / Thành phố', awardName: 'Tham gia (không đạt giải)', points: 1.5 },
         ],
       };
       setMovements((prev) => [newMov, ...prev]);
@@ -466,7 +468,11 @@ export const MovementsAndAwardsTab: React.FC<MovementsAndAwardsTabProps> = ({
                     <td className="py-3 px-3 max-w-xs truncate" title={p.movementTitle}>{p.movementTitle}</td>
                     <td className="py-3 px-3 font-semibold text-slate-700">{p.level}</td>
                     <td className="py-3 px-3">
-                      <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-[11px]">
+                      <span className={`font-bold px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 ${
+                        p.awardName.toLowerCase().includes('tham gia')
+                          ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                          : 'bg-amber-100 text-amber-900 border border-amber-200'
+                      }`}>
                         {p.awardName}
                       </span>
                     </td>
@@ -600,6 +606,8 @@ export const MovementsAndAwardsTab: React.FC<MovementsAndAwardsTabProps> = ({
                   <option value="Giải Khuyến Khích">Giải Khuyến Khích</option>
                   <option value="Đạt giải / Giấy khen">Đạt giải / Giấy khen</option>
                   <option value="Bằng khen cấp Bộ/Tỉnh">Bằng khen cấp Bộ/Tỉnh</option>
+                  <option value="Tham gia (không đạt giải)">Tham gia (không đạt giải / Khuyến khích dự thi)</option>
+                  <option value="Tham gia nhưng không đạt giải">Tham gia nhưng không đạt giải</option>
                 </select>
               </div>
 

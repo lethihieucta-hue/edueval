@@ -14,7 +14,9 @@ import {
   MovementParticipation,
   AttendanceRecord,
   SelfDeclarationRecord,
-  UserAccount
+  UserAccount,
+  PerformanceCriterionRule,
+  TeacherPerformanceRecord
 } from './types';
 import { 
   MOCK_TEACHERS, 
@@ -27,7 +29,9 @@ import {
   INITIAL_MOVEMENT_PARTICIPATIONS,
   INITIAL_ATTENDANCE_RECORDS,
   INITIAL_SELF_DECLARATIONS,
-  INITIAL_USER_ACCOUNTS
+  INITIAL_USER_ACCOUNTS,
+  INITIAL_PERFORMANCE_CRITERIA,
+  INITIAL_PERFORMANCE_RECORDS
 } from './data/mockData';
 
 import { Navbar } from './components/Navbar';
@@ -35,6 +39,7 @@ import { Sidebar, TabType } from './components/Sidebar';
 import { OverviewTab } from './components/Dashboard/OverviewTab';
 import { AdminDeptStaffTab } from './components/Admin/AdminDeptStaffTab';
 import { MovementsAndAwardsTab } from './components/Admin/MovementsAndAwardsTab';
+import { PersonalPerformanceTab } from './components/Admin/PersonalPerformanceTab';
 import { AttendanceAndTardinessTab } from './components/Admin/AttendanceAndTardinessTab';
 import { SelfDeclarationAndApprovalTab } from './components/Evaluation/SelfDeclarationAndApprovalTab';
 import { WeightMatrixSandboxTab } from './components/Admin/WeightMatrixSandboxTab';
@@ -140,6 +145,49 @@ export default function App() {
   const [criteria, setCriteria] = useState(INITIAL_CRITERIA);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
   const [appeals, setAppeals] = useState<AppealDispute[]>(INITIAL_APPEALS);
+
+  // Hiệu Suất Cá Nhân & Điểm Mở Rộng State
+  const [performanceRules, setPerformanceRules] = useState<PerformanceCriterionRule[]>(() => {
+    try {
+      const saved = localStorage.getItem('edueval_performance_rules_v5');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading performance rules:', e);
+    }
+    return INITIAL_PERFORMANCE_CRITERIA;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('edueval_performance_rules_v5', JSON.stringify(performanceRules));
+    } catch (e) {
+      console.error('Error saving performance rules:', e);
+    }
+  }, [performanceRules]);
+
+  const [performanceRecords, setPerformanceRecords] = useState<TeacherPerformanceRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('edueval_performance_records_v5');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading performance records:', e);
+    }
+    return INITIAL_PERFORMANCE_RECORDS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('edueval_performance_records_v5', JSON.stringify(performanceRecords));
+    } catch (e) {
+      console.error('Error saving performance records:', e);
+    }
+  }, [performanceRecords]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -411,6 +459,32 @@ export default function App() {
                 };
                 setAuditLogs((prev) => [newLog, ...prev]);
               }}
+            />
+          )}
+
+          {activeTab === 'personal_performance' && (
+            <PersonalPerformanceTab
+              performanceRules={performanceRules}
+              setPerformanceRules={setPerformanceRules}
+              performanceRecords={performanceRecords}
+              setPerformanceRecords={setPerformanceRecords}
+              teachers={teachers}
+              onAddPassiveLog={handleAddPassiveLog}
+              onAddAuditLog={(action, targetName, details) => {
+                const newLog: AuditLogItem = {
+                  id: `log_perf_${Date.now()}`,
+                  timestamp: new Date().toLocaleString('vi-VN'),
+                  actorName: currentUser?.fullName || 'Ban Giám Hiệu',
+                  actorRole: currentRole,
+                  action,
+                  targetTeacherName: targetName,
+                  details,
+                  ipAddress: '118.70.124.18',
+                };
+                setAuditLogs((prev) => [newLog, ...prev]);
+              }}
+              academicYear={academicYear}
+              period={period}
             />
           )}
 
